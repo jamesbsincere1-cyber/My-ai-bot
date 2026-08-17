@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Smooth Guitar Pluck Simulator</title>
+    <style>
+        body { background-color: #0b0f19; color: #94a3b8; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .grid { display: grid; grid-template-columns: repeat(2, 160px); gap: 15px; }
+        button { padding: 25px; border-radius: 12px; border: 1px solid #1e293b; background-color: #1e293b; color: #f8fafc; font-weight: bold; cursor: pointer; }
+        button:active { background-color: #e11d48; }
+        h2 { color: #f1f5f9; margin-bottom: 5px; }
+        p { margin-bottom: 30px; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <h2>Smooth Guitar Simulator</h2>
+    <p>Tap a button to trigger a mathematically modeled string pluck loop.</p>
+
+    <div class="grid">
+        <button onclick="pluckString(146.83)">Low D String</button>
+        <button onclick="pluckString(196.00)">G String</button>
+        <button onclick="pluckString(246.94)">B String</button>
+        <button onclick="pluckString(329.63)">High E String</button>
+    </div>
+
+<script>
+let audioCtx = null;
+
+function pluckString(frequency) {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Create the oscillator (the vibrating string)
+    let osc = audioCtx.createOscillator();
+    let gainNode = audioCtx.createGain();
+    
+    // A triangle wave sounds much closer to a hollow, woody acoustic instrument string
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+    
+    // --- THE GUITAR ENVELOPE CODE ---
+    let now = audioCtx.currentTime;
+    
+    // 1. ATTACK: Volume goes from absolute zero to peak volume instantly (0.01 seconds)
+    gainNode.gain.setValueAtTime(0, now);
+    gainNode.gain.linearRampToValueAtTime(0.4, now + 0.01);
+    
+    // 2. DECAY/RELEASE: Volume drops exponentially over 1.2 seconds, mimicking a natural ring-out
+    gainNode.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+    
+    // Connect to speakers and fire up the signal
+    osc.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    osc.start(now);
+    osc.stop(now + 1.2); // Fully kill the process after it fades out to protect memory cache
+}
+</script>
+</body>
+</html>
