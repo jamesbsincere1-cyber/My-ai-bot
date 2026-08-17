@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Offline Mobile AI Simulator</title>
+    <title>Smart Text AI</title>
     <style>
         :root {
             --bg-color: #131314;
@@ -14,9 +14,8 @@
             --accent: #a8c7fa;
             --input-bg: #282a2d;
         }
-
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
@@ -24,17 +23,31 @@
             flex-direction: column;
             height: 100vh;
         }
-
-        #status-bar {
+        #config-bar {
             background-color: #000;
-            padding: 10px;
-            text-align: center;
-            font-size: 13px;
-            color: #4caf50;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
             border-bottom: 1px solid #333;
-            font-weight: bold;
         }
-
+        #api-key-input {
+            width: 100%;
+            background: var(--input-bg);
+            border: 1px solid #444;
+            color: #fff;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .save-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #aaa;
+        }
         #chat-container {
             flex: 1;
             overflow-y: auto;
@@ -43,7 +56,6 @@
             flex-direction: column;
             gap: 16px;
         }
-
         .message {
             max-width: 85%;
             padding: 12px 16px;
@@ -52,25 +64,21 @@
             font-size: 15px;
             word-wrap: break-word;
         }
-
         .user {
             background-color: var(--user-msg);
             align-self: flex-end;
             border-bottom-right-radius: 4px;
         }
-
         .ai {
             background-color: var(--ai-msg);
             align-self: flex-start;
             border-bottom-left-radius: 4px;
             border: 1px solid #333;
         }
-
         #input-container {
             padding: 15px;
             background-color: var(--bg-color);
         }
-
         #input-form {
             display: flex;
             background: var(--input-bg);
@@ -79,7 +87,6 @@
             border: 1px solid #444;
             align-items: center;
         }
-
         #user-input {
             flex: 1;
             background: transparent;
@@ -92,7 +99,6 @@
             height: 24px;
             font-family: inherit;
         }
-
         #send-btn {
             background: var(--accent);
             color: #042100;
@@ -103,24 +109,29 @@
             cursor: pointer;
             font-size: 14px;
         }
+        #send-btn:disabled {
+            background: #444;
+            color: #777;
+        }
     </style>
 </head>
 <body>
 
-    <!-- Upper indicator confirming code runs safely on device -->
-    <div id="status-bar">
-        🟢 LOCAL APP MODE: No API Keys Required
+    <div id="config-bar">
+        <input type="password" id="api-key-input" placeholder="Paste your AQ. Key here..." />
+        <div class="save-container">
+            <input type="checkbox" id="save-key-checkbox">
+            <label for="save-key-checkbox">Remember Key on this Phone</label>
+        </div>
     </div>
 
-    <!-- Chat Display Window -->
     <div id="chat-container">
-        <div class="message ai">Hello! I am your locally-running text assistant. Network barriers are cleared—ask me anything, and I will process it directly on your phone!</div>
+        <div class="message ai">System Ready. Storing key credential. Type below to converse.</div>
     </div>
 
-    <!-- Input Bar Dock -->
     <div id="input-container">
         <form id="input-form">
-            <textarea id="user-input" placeholder="Type a message to test..." required></textarea>
+            <textarea id="user-input" placeholder="Message your AI..." required></textarea>
             <button type="submit" id="send-btn">Send</button>
         </form>
     </div>
@@ -129,33 +140,81 @@
         const chatContainer = document.getElementById('chat-container');
         const inputForm = document.getElementById('input-form');
         const userInput = document.getElementById('user-input');
+        const apiKeyInput = document.getElementById('api-key-input');
+        const saveKeyCheckbox = document.getElementById('save-key-checkbox');
         const sendBtn = document.getElementById('send-btn');
 
-        // Automatic phone typing text-box expansion logic
+        let conversationHistory = [];
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedKey = localStorage.getItem('gemini_key_v2');
+            if (savedKey) {
+                apiKeyInput.value = savedKey;
+                saveKeyCheckbox.checked = true;
+            }
+        });
+
         userInput.addEventListener('input', function() {
             this.style.height = '24px';
             this.style.height = (this.scrollHeight - 10) + 'px';
         });
 
-        // Trigger local response mechanics when button tapped
-        inputForm.addEventListener('submit', (e) => {
+        inputForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const text = userInput.value.trim();
-            if (!text) return;
+            const apiKey = apiKeyInput.value.trim();
 
-            // Clear input box immediately
+            if (!text) return;
+            if (!apiKey) {
+                alert("Please paste your key.");
+                return;
+            }
+
+            if (saveKeyCheckbox.checked) {
+                localStorage.setItem('gemini_key_v2', apiKey);
+            } else {
+                localStorage.removeItem('gemini_key_v2');
+            }
+
             userInput.value = '';
             userInput.style.height = '24px';
+            setLoading(true);
 
-            // Print user message to screen
             appendMessage(text, 'user');
+            conversationHistory.push({ role: "user", parts: [{ text: text }] });
 
-            // Generate an automated response instantly inside the phone's memory
-            setTimeout(() => {
-                const responseText = `Received message: "${text}". \n\nSuccess! Your website interface is configured perfectly on GitHub Pages. The prior "Failed to Fetch" message occurred purely because outside server bridges blocked the connection to corporate API clouds.`;
-                appendMessage(responseText, 'ai');
-            }, 600);
+            const aiMessageDiv = appendMessage('Thinking...', 'ai');
+
+            try {
+                // Modified headers to appropriately comply with newer cloud authorization methods
+                const response = await fetch(`https://googleapis.com`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'x-goog-api-key': apiKey
+                    },
+                    body: JSON.stringify({ contents: conversationHistory })
+                });
+
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error?.message || 'Connection failed.');
+                }
+
+                const aiResponseText = data.candidates[0].content.parts[0].text;
+                aiMessageDiv.innerText = aiResponseText;
+                
+                conversationHistory.push({ role: "model", parts: [{ text: aiResponseText }] });
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            } catch (error) {
+                aiMessageDiv.innerText = `Error: ${error.message}`;
+                aiMessageDiv.style.color = '#ff6b6b';
+            } finally {
+                setLoading(false);
+            }
         });
 
         function appendMessage(text, sender) {
@@ -165,6 +224,16 @@
             chatContainer.appendChild(msgDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
             return msgDiv;
+        }
+
+        function setLoading(isLoading) {
+            if (isLoading) {
+                sendBtn.disabled = true;
+                sendBtn.innerText = "...";
+            } else {
+                sendBtn.disabled = false;
+                sendBtn.innerText = "Send";
+            }
         }
     </script>
 </body>
