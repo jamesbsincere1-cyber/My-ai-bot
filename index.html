@@ -2,142 +2,204 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dragon's Gold: Text Quest</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>2D Mobile Evader</title>
     <style>
-        :root {
-            --bg: #1a120b;
-            --panel: #3c2a21;
-            --text: #e5ba73;
-            --btn-bg: #d5b47a;
-            --btn-text: #1a120b;
-        }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
             margin: 0;
-            padding: 15px;
+            background-color: #111;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
             display: flex;
             flex-direction: column;
-            height: 100vh;
-            box-sizing: border-box;
-        }
-        #screen {
-            flex: 1;
-            background-color: var(--panel);
-            border-radius: 12px;
-            padding: 20px;
-            overflow-y: auto;
-            font-size: 16px;
-            line-height: 1.6;
-            margin-bottom: 15px;
-            border: 2px solid #c5a880;
-        }
-        #input-dock {
-            display: flex;
-            background: #2c1e17;
-            border-radius: 30px;
-            padding: 6px 12px;
-            border: 1px solid var(--text);
             align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            /* Prevents phone screen from bouncing on swipe */
+            position: fixed;
+            width: 100%;
         }
-        #player-input {
-            flex: 1;
-            background: transparent;
-            border: none;
-            color: #fff;
-            padding: 10px;
-            font-size: 16px;
-            outline: none;
-        }
-        #exec-btn {
-            background: var(--btn-bg);
-            color: var(--btn-text);
-            border: none;
-            border-radius: 20px;
-            padding: 8px 18px;
+
+        #ui-layer {
+            margin-bottom: 10px;
+            font-size: 18px;
             font-weight: bold;
-            font-size: 14px;
+        }
+
+        /* The 2D Graphic viewport box */
+        canvas {
+            background-color: #222;
+            border: 2px solid #555;
+            max-width: 90vw;
+            max-height: 50vh;
+            border-radius: 8px;
+        }
+
+        #controls {
+            display: flex;
+            gap: 20px;
+            margin-top: 15px;
+            width: 80%;
+            justify-content: center;
+        }
+
+        .btn {
+            background-color: #444;
+            color: white;
+            border: none;
+            padding: 15px 35px;
+            font-size: 24px;
+            font-weight: bold;
+            border-radius: 12px;
+            /* Prevents phone zoom double-tap delay */
+            touch-action: manipulation; 
+        }
+
+        .btn:active {
+            background-color: #888;
         }
     </style>
 </head>
 <body>
 
-    <div id="screen">
-        <div><b>[ QUEST START: THE DRAGON'S LAIR ]</b></div>
-        <br>
-        <div>You stand at the mouth of a dark, stone cave. Deep inside, you hear the rumbling breath of a sleeping dragon guarding a mountain of gold. You carry an empty sack and a rusty iron sword.</div>
-        <br>
-        <div style="color: #fff;">What do you do? Type a choice number below:</div>
-        <div>1. Sneak quietly past the dragon's snout.</div>
-        <div>2. Draw your sword and charge blindly into the dark.</div>
-    </div>
+    <div id="ui-layer">SCORE: <span id="score-val">0</span></div>
+    
+    <!-- This box draws the actual graphics -->
+    <canvas id="gameCanvas" width="300" height="400"></canvas>
 
-    <div id="input-dock">
-        <input type="number" id="player-input" placeholder="Type 1 or 2..." min="1" max="2" pattern="\d*">
-        <button id="exec-btn">GO</button>
+    <!-- Mobile Button Dock -->
+    <div id="controls">
+        <button class="btn" id="left-btn">◀</button>
+        <button class="btn" id="right-btn">▶</button>
     </div>
 
     <script>
-        const screen = document.getElementById('screen');
-        const input = document.getElementById('player-input');
-        const button = document.getElementById('exec-btn');
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d'); // Pull the 2D draw engine
+        const scoreDisplay = document.getElementById('score-val');
 
-        let currentStep = 'start';
+        let score = 0;
+        let isGameOver = false;
 
-        function gameEngine() {
-            const choice = input.value.trim();
-            if (!choice) return;
+        // Player configuration
+        let player = {
+            x: 135,
+            y: 360,
+            width: 30,
+            height: 30,
+            speed: 15,
+            color: '#00ffcc'
+        };
 
-            input.value = '';
-            
-            if (currentStep === 'start') {
-                if (choice === '1') {
-                    screen.innerHTML = `
-                        <div>You sneak quietly into the cavern. The gold sparkles everywhere! But right next to the hoard, you see an old wooden treasure chest and a glowing purple potion.</div>
-                        <br>
-                        <div style="color: #fff;">What next? Type a choice number:</div>
-                        <div>1. Open the mysterious chest.</div>
-                        <div>2. Drink the glowing potion.</div>
-                    `;
-                    currentStep = 'sneak';
-                } else if (choice === '2') {
-                    screen.innerHTML = `
-                        <div>You scream and charge! Your rusty sword clangs loudly against the stone wall. The dragon wakes up instantly, breathes a massive wave of fire, and vaporizes you.</div>
-                        <br>
-                        <div style="color: #ff6b6b;"><b>[ GAME OVER ]</b></div>
-                        <div>Refresh your browser page to try again!</div>
-                    `;
-                    button.disabled = true;
+        // Falling hazards array
+        let obstacles = [];
+        let obstacleSpeed = 3;
+        let spawnRate = 0.02; // Chance to generate each frame
+
+        // Touch Control Listeners
+        document.getElementById('left-btn').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (player.x > 0) player.x -= player.speed;
+        });
+
+        document.getElementById('right-btn').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (player.x < canvas.width - player.width) player.x += player.speed;
+        });
+
+        // Fallback Click Listeners for standard browser view
+        document.getElementById('left-btn').addEventListener('click', () => {
+            if (player.x > 0) player.x -= player.speed;
+        });
+        document.getElementById('right-btn').addEventListener('click', () => {
+            if (player.x < canvas.width - player.width) player.x += player.speed;
+        });
+
+        // Main game cycle frame updates
+        function update() {
+            if (isGameOver) return;
+
+            // 1. Spawning Mechanics
+            if (Math.random() < spawnRate) {
+                let size = Math.floor(Math.random() * 20) + 15;
+                obstacles.push({
+                    x: Math.random() * (canvas.width - size),
+                    y: -size,
+                    width: size,
+                    height: size,
+                    color: '#ff4444'
+                });
+            }
+
+            // 2. Physics & Positions
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                obstacles[i].y += obstacleSpeed;
+
+                // Collision detection check
+                if (
+                    player.x < obstacles[i].x + obstacles[i].width &&
+                    player.x + player.width > obstacles[i].x &&
+                    player.y < obstacles[i].y + obstacles[i].height &&
+                    player.y + player.height > obstacles[i].y
+                ) {
+                    isGameOver = true;
                 }
-            } 
-            else if (currentStep === 'sneak') {
-                if (choice === '1') {
-                    screen.innerHTML = `
-                        <div>You creak open the chest. Inside is a magical Cloak of Invisibility! You throw it on, fill your sack with gold right under the dragon's nose, and walk out a wealthy hero!</div>
-                        <br>
-                        <div style="color: #6bff6b;"><b>[ VICTORY! YOU WIN! ]</b></div>
-                        <div>Refresh your browser to play the journey again.</div>
-                    `;
-                    button.disabled = true;
-                } else if (choice === '2') {
-                    screen.innerHTML = `
-                        <div>You chug the purple potion. It turns out to be a heavy sleeping draft! You fall asleep instantly on the cave floor. The dragon wakes up up later and finds a convenient snack.</div>
-                        <br>
-                        <div style="color: #ff6b6b;"><b>[ GAME OVER ]</b></div>
-                        <div>Refresh your browser page to try again!</div>
-                    `;
-                    button.disabled = true;
+
+                // Delete off-screen obstacles and add points
+                if (obstacles[i].y > canvas.height) {
+                    obstacles.splice(i, 1);
+                    score++;
+                    scoreDisplay.innerText = score;
+
+                    // Gradually speed up game difficulty
+                    if (score % 10 === 0) {
+                        obstacleSpeed += 0.5;
+                        spawnRate += 0.005;
+                    }
                 }
             }
-            screen.scrollTop = screen.scrollHeight;
         }
 
-        button.addEventListener('click', gameEngine);
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') gameEngine();
-        });
+        // Draw loop handler
+        function render() {
+            // Clear entire display box each frame
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw player square
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+
+            // Draw obstacle items
+            for (let obs of obstacles) {
+                ctx.fillStyle = obs.color;
+                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+            }
+
+            // Game over screen print
+            if (isGameOver) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = '24px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2);
+                
+                ctx.font = '14px Arial';
+                ctx.fillText("Refresh browser to retry", canvas.width / 2, canvas.height / 2 + 30);
+            }
+        }
+
+        // Perpetual animation runner loop
+        function loop() {
+            update();
+            render();
+            requestAnimationFrame(loop);
+        }
+
+        // Start execution
+        loop();
     </script>
 </body>
 </html>
