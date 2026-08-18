@@ -3,251 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TERMINAL HACKER 2099</title>
+    <title>Dragon's Gold: Text Quest</title>
     <style>
         :root {
-            --bg-color: #0a0a0c;
-            --text-color: #33ff33;
-            --dim-text: #1a881a;
-            --alert-color: #ff3333;
-            --input-bg: #141416;
-            --panel-bg: #111113;
+            --bg: #1a120b;
+            --panel: #3c2a21;
+            --text: #e5ba73;
+            --btn-bg: #d5b47a;
+            --btn-text: #1a120b;
         }
-
         body {
-            font-family: 'Courier New', Courier, monospace;
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
             margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        #header {
-            background-color: #000;
-            padding: 10px;
-            font-size: 12px;
-            text-align: center;
-            border-bottom: 2px solid var(--dim-text);
-            letter-spacing: 2px;
-        }
-
-        #stats-bar {
-            background-color: var(--panel-bg);
-            padding: 8px 15px;
-            display: flex;
-            justify-content: space-between;
-            font-size: 13px;
-            border-bottom: 1px solid var(--dim-text);
-        }
-
-        #terminal-box {
-            flex: 1;
-            overflow-y: auto;
             padding: 15px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            font-size: 14px;
-            line-height: 1.4;
+            height: 100vh;
+            box-sizing: border-box;
         }
-
-        .line {
-            word-wrap: break-word;
-            white-space: pre-wrap;
-        }
-
-        .system { color: #8888ff; }
-        .success { color: var(--text-color); }
-        .warning { color: #ffff33; }
-        .danger { color: var(--alert-color); font-weight: bold; }
-        .user-cmd { color: #ffffff; }
-
-        #input-area {
-            padding: 12px;
-            background-color: #000;
-            border-top: 1px solid var(--dim-text);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        #prompt {
-            font-weight: bold;
+        #screen {
+            flex: 1;
+            background-color: var(--panel);
+            border-radius: 12px;
+            padding: 20px;
+            overflow-y: auto;
             font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            border: 2px solid #c5a880;
         }
-
-        #cmd-input {
+        #input-dock {
+            display: flex;
+            background: #2c1e17;
+            border-radius: 30px;
+            padding: 6px 12px;
+            border: 1px solid var(--text);
+            align-items: center;
+        }
+        #player-input {
             flex: 1;
             background: transparent;
             border: none;
-            color: #ffffff;
-            font-family: inherit;
+            color: #fff;
+            padding: 10px;
             font-size: 16px;
             outline: none;
         }
-
-        #submit-btn {
-            background: var(--dim-text);
-            color: #000;
+        #exec-btn {
+            background: var(--btn-bg);
+            color: var(--btn-text);
             border: none;
-            padding: 6px 16px;
-            font-family: inherit;
+            border-radius: 20px;
+            padding: 8px 18px;
             font-weight: bold;
-            cursor: pointer;
-            border-radius: 4px;
-        }
-
-        #submit-btn:active {
-            background: var(--text-color);
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
 
-    <div id="header">=== NEO-BROOKLYN SUBNET TERMINAL v4.21 ===</div>
-    
-    <div id="stats-bar">
-        <span>RAM: <span id="ram-stat">4.0 GB</span></span>
-        <span>SECURITY LEVEL: <span id="sec-stat" class="warning">LOW</span></span>
-        <span>SCORE: <span id="score-stat">0</span></span>
+    <div id="screen">
+        <div><b>[ QUEST START: THE DRAGON'S LAIR ]</b></div>
+        <br>
+        <div>You stand at the mouth of a dark, stone cave. Deep inside, you hear the rumbling breath of a sleeping dragon guarding a mountain of gold. You carry an empty sack and a rusty iron sword.</div>
+        <br>
+        <div style="color: #fff;">What do you do? Type a choice number below:</div>
+        <div>1. Sneak quietly past the dragon's snout.</div>
+        <div>2. Draw your sword and charge blindly into the dark.</div>
     </div>
 
-    <div id="terminal-box">
-        <div class="line system">[SYSTEM INITIALIZED] Welcome, Operative.</div>
-        <div class="line">You have booted a low-profile terminal link into a stolen corporate data drive. Your grid location is currently hidden, but scanning software is looking for you.</div>
-        <div class="line warning">Type "help" to view a list of available terminal sub-commands.</div>
-    </div>
-
-    <div id="input-area">
-        <span id="prompt">root@cyberdeck:~$</span>
-        <input type="text" id="cmd-input" placeholder="Type a command..." autocomplete="off" autocapitalize="off">
-        <button id="submit-btn">EXEC</button>
+    <div id="input-dock">
+        <input type="number" id="player-input" placeholder="Type 1 or 2..." min="1" max="2" pattern="\d*">
+        <button id="exec-btn">GO</button>
     </div>
 
     <script>
-        const terminal = document.getElementById('terminal-box');
-        const input = document.getElementById('cmd-input');
-        const button = document.getElementById('submit-btn');
-        
-        const ramStat = document.getElementById('ram-stat');
-        const secStat = document.getElementById('sec-stat');
-        const scoreStat = document.getElementById('score-stat');
+        const screen = document.getElementById('screen');
+        const input = document.getElementById('player-input');
+        const button = document.getElementById('exec-btn');
 
-        let gameState = {
-            ram: 4.0,
-            security: 'LOW',
-            score: 0,
-            stage: 'start', // start, broken, bypassed, complete
-            attempts: 0
-        };
+        let currentStep = 'start';
 
-        // Command processing hub
-        function runCommand() {
-            const cmd = input.value.trim().toLowerCase();
-            if (!cmd) return;
+        function gameEngine() {
+            const choice = input.value.trim();
+            if (!choice) return;
 
-            // Output user's typed command to the screen
-            appendLine(`root@cyberdeck:~$ ${input.value}`, 'user-cmd');
             input.value = '';
-
-            // Core Game Logic Loop
-            if (cmd === 'help') {
-                appendLine('Available Core Sub-commands:\n' +
-                           '  [help]     Display this directory layout.\n' +
-                           '  [scan]     Analyze the encrypted corporate core drive.\n' +
-                           '  [overclock] Instantly boost your system memory (+RAM).\n' +
-                           '  [bypass]   Attempt to crack the active tracking script.\n' +
-                           '  [clear]    Wipe the terminal display screen.', 'warning');
-            } 
-            else if (cmd === 'clear') {
-                terminal.innerHTML = '';
-            } 
-            else if (cmd === 'overclock') {
-                if (gameState.ram >= 16.0) {
-                    appendLine('[-] WARNING: Motherboard temperature critical. Overclock limit reached!', 'danger');
-                } else {
-                    gameState.ram += 4.0;
-                    ramStat.innerText = `${gameState.ram.toFixed(1)} GB`;
-                    appendLine(`[+] SUCCESS: Voltage increased. RAM boosted to ${gameState.ram.toFixed(1)} GB! System stability declining.`, 'success');
+            
+            if (currentStep === 'start') {
+                if (choice === '1') {
+                    screen.innerHTML = `
+                        <div>You sneak quietly into the cavern. The gold sparkles everywhere! But right next to the hoard, you see an old wooden treasure chest and a glowing purple potion.</div>
+                        <br>
+                        <div style="color: #fff;">What next? Type a choice number:</div>
+                        <div>1. Open the mysterious chest.</div>
+                        <div>2. Drink the glowing potion.</div>
+                    `;
+                    currentStep = 'sneak';
+                } else if (choice === '2') {
+                    screen.innerHTML = `
+                        <div>You scream and charge! Your rusty sword clangs loudly against the stone wall. The dragon wakes up instantly, breathes a massive wave of fire, and vaporizes you.</div>
+                        <br>
+                        <div style="color: #ff6b6b;"><b>[ GAME OVER ]</b></div>
+                        <div>Refresh your browser page to try again!</div>
+                    `;
+                    button.disabled = true;
                 }
             } 
-            else if (cmd === 'scan') {
-                if (gameState.stage === 'start') {
-                    appendLine('[*] SCANNING ENGINE INITIALIZED...', 'system');
-                    setTimeout(() => {
-                        appendLine('[!] TARGET FOUND: Enclave_Data_Vault_7.bin detected.\n' +
-                                   '[!] SECURITY ALERT: An active tracking node is monitoring this drive.\n' +
-                                   '>> Run [bypass] to crack the protection sequence.', 'warning');
-                        gameState.stage = 'scanned';
-                    }, 500);
-                } else {
-                    appendLine('[*] SCAN RESULT: Target drive active. Trace defense running. Use [bypass] immediately.', 'warning');
+            else if (currentStep === 'sneak') {
+                if (choice === '1') {
+                    screen.innerHTML = `
+                        <div>You creak open the chest. Inside is a magical Cloak of Invisibility! You throw it on, fill your sack with gold right under the dragon's nose, and walk out a wealthy hero!</div>
+                        <br>
+                        <div style="color: #6bff6b;"><b>[ VICTORY! YOU WIN! ]</b></div>
+                        <div>Refresh your browser to play the journey again.</div>
+                    `;
+                    button.disabled = true;
+                } else if (choice === '2') {
+                    screen.innerHTML = `
+                        <div>You chug the purple potion. It turns out to be a heavy sleeping draft! You fall asleep instantly on the cave floor. The dragon wakes up up later and finds a convenient snack.</div>
+                        <br>
+                        <div style="color: #ff6b6b;"><b>[ GAME OVER ]</b></div>
+                        <div>Refresh your browser page to try again!</div>
+                    `;
+                    button.disabled = true;
                 }
-            } 
-            else if (cmd === 'bypass') {
-                if (gameState.stage === 'start') {
-                    appendLine('[-] ERROR: No compilation target loaded. Run a [scan] first.', 'danger');
-                    return;
-                }
-                if (gameState.stage === 'complete') {
-                    appendLine('[+] SYSTEM MESSAGE: Subnet cleared. No active blocks left.', 'success');
-                    return;
-                }
-
-                appendLine('[*] EXECUTING CRACK INJECTOR...', 'system');
-                gameState.attempts++;
-
-                setTimeout(() => {
-                    // Check if player has enough RAM to guarantee success
-                    if (gameState.ram >= 12.0) {
-                        gameState.score += 250;
-                        gameState.stage = 'complete';
-                        secStat.innerText = 'CLEARED';
-                        secStat.className = 'success';
-                        scoreStat.innerText = gameState.score;
-                        appendLine('[+++] ACCESS GRANTED [+++]\n' +
-                                   'The tracking script has been purged! You successfully extracted the software kernel.\n' +
-                                   'Neo-Brooklyn underground networks credit you +250 Credits. Mission Complete!', 'success');
-                    } else {
-                        // Not enough RAM - Security level increases
-                        if (gameState.attempts === 1) {
-                            gameState.security = 'MEDIUM';
-                            secStat.innerText = 'MEDIUM';
-                            secStat.className = 'warning';
-                            appendLine('[-] INJECTOR FAILED: Your system memory buffer overflowed. The encryption repelled the attack.\n' +
-                                       '[!] TRACE ALARM: Security tracker warning levels rising. Boost your memory capacity!', 'danger');
-                        } else {
-                            gameState.security = 'CRITICAL';
-                            secStat.innerText = 'CRITICAL';
-                            secStat.className = 'danger';
-                            appendLine('[!!!] SECURITY BREACHED [!!!]\n' +
-                                       'Corp defense matrix deployed a counter-virus. Your location was pin-pointed.\n' +
-                                       'GAME OVER. Refresh the page or type "overclock" then "bypass" to try again with a better strategy.', 'danger');
-                        }
-                    }
-                }, 800);
-            } 
-            else {
-                appendLine(`[-] Command not recognized: "${cmd}". Type "help" for a layout structure map.`, 'danger');
             }
+            screen.scrollTop = screen.scrollHeight;
         }
 
-        function appendLine(text, className = '') {
-            const div = document.createElement('div');
-            div.className = `line ${className}`;
-            div.innerText = text;
-            terminal.appendChild(div);
-            terminal.scrollTop = terminal.scrollHeight;
-        }
-
-        // Handle both button click and enter key inputs
-        button.addEventListener('click', runCommand);
+        button.addEventListener('click', gameEngine);
         input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') runCommand();
+            if (e.key === 'Enter') gameEngine();
         });
     </script>
 </body>
