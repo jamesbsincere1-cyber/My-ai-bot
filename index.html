@@ -2,204 +2,124 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2D Mobile Evader</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dave Chappelle 90 Joke Generator</title>
     <style>
         body {
-            margin: 0;
-            background-color: #111;
-            color: #fff;
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
             display: flex;
-            flex-direction: column;
+            justify-content: center;
             align-items: center;
-            justify-content: center;
             height: 100vh;
-            overflow: hidden;
-            /* Prevents phone screen from bouncing on swipe */
-            position: fixed;
-            width: 100%;
+            margin: 0;
         }
-
-        #ui-layer {
-            margin-bottom: 10px;
-            font-size: 18px;
-            font-weight: bold;
+        .container {
+            text-align: center;
+            background-color: #1e1e1e;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            max-width: 600px;
+            width: 90%;
         }
-
-        /* The 2D Graphic viewport box */
-        canvas {
-            background-color: #222;
-            border: 2px solid #555;
-            max-width: 90vw;
-            max-height: 50vh;
-            border-radius: 8px;
-        }
-
-        #controls {
-            display: flex;
-            gap: 20px;
-            margin-top: 15px;
-            width: 80%;
-            justify-content: center;
-        }
-
-        .btn {
-            background-color: #444;
-            color: white;
-            border: none;
-            padding: 15px 35px;
+        h1 {
+            color: #ffcc00;
             font-size: 24px;
-            font-weight: bold;
-            border-radius: 12px;
-            /* Prevents phone zoom double-tap delay */
-            touch-action: manipulation; 
+            margin-bottom: 5px;
         }
-
-        .btn:active {
-            background-color: #888;
+        .counter {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .joke-box {
+            font-size: 18px;
+            min-height: 100px;
+            margin-bottom: 25px;
+            line-height: 1.6;
+            white-space: pre-line;
+        }
+        button {
+            background-color: #ffcc00;
+            color: #121212;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #e6b800;
         }
     </style>
 </head>
 <body>
 
-    <div id="ui-layer">SCORE: <span id="score-val">0</span></div>
-    
-    <!-- This box draws the actual graphics -->
-    <canvas id="gameCanvas" width="300" height="400"></canvas>
+<div class="container">
+    <h1>Dave Chappelle Joke Generator</h1>
+    <div class="counter" id="jokeCounter">Jokes Loaded: 90</div>
+    <div class="joke-box" id="jokeDisplay">Click below to cycle through all 90 bits!</div>
+    <button onclick="getJoke()">Next Joke</button>
+</div>
 
-    <!-- Mobile Button Dock -->
-    <div id="controls">
-        <button class="btn" id="left-btn">◀</button>
-        <button class="btn" id="right-btn">▶</button>
-    </div>
-
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d'); // Pull the 2D draw engine
-        const scoreDisplay = document.getElementById('score-val');
-
-        let score = 0;
-        let isGameOver = false;
-
-        // Player configuration
-        let player = {
-            x: 135,
-            y: 360,
-            width: 30,
-            height: 30,
-            speed: 15,
-            color: '#00ffcc'
-        };
-
-        // Falling hazards array
-        let obstacles = [];
-        let obstacleSpeed = 3;
-        let spawnRate = 0.02; // Chance to generate each frame
-
-        // Touch Control Listeners
-        document.getElementById('left-btn').addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            if (player.x > 0) player.x -= player.speed;
-        });
-
-        document.getElementById('right-btn').addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            if (player.x < canvas.width - player.width) player.x += player.speed;
-        });
-
-        // Fallback Click Listeners for standard browser view
-        document.getElementById('left-btn').addEventListener('click', () => {
-            if (player.x > 0) player.x -= player.speed;
-        });
-        document.getElementById('right-btn').addEventListener('click', () => {
-            if (player.x < canvas.width - player.width) player.x += player.speed;
-        });
-
-        // Main game cycle frame updates
-        function update() {
-            if (isGameOver) return;
-
-            // 1. Spawning Mechanics
-            if (Math.random() < spawnRate) {
-                let size = Math.floor(Math.random() * 20) + 15;
-                obstacles.push({
-                    x: Math.random() * (canvas.width - size),
-                    y: -size,
-                    width: size,
-                    height: size,
-                    color: '#ff4444'
-                });
-            }
-
-            // 2. Physics & Positions
-            for (let i = obstacles.length - 1; i >= 0; i--) {
-                obstacles[i].y += obstacleSpeed;
-
-                // Collision detection check
-                if (
-                    player.x < obstacles[i].x + obstacles[i].width &&
-                    player.x + player.width > obstacles[i].x &&
-                    player.y < obstacles[i].y + obstacles[i].height &&
-                    player.y + player.height > obstacles[i].y
-                ) {
-                    isGameOver = true;
-                }
-
-                // Delete off-screen obstacles and add points
-                if (obstacles[i].y > canvas.height) {
-                    obstacles.splice(i, 1);
-                    score++;
-                    scoreDisplay.innerText = score;
-
-                    // Gradually speed up game difficulty
-                    if (score % 10 === 0) {
-                        obstacleSpeed += 0.5;
-                        spawnRate += 0.005;
-                    }
-                }
-            }
-        }
-
-        // Draw loop handler
-        function render() {
-            // Clear entire display box each frame
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Draw player square
-            ctx.fillStyle = player.color;
-            ctx.fillRect(player.x, player.y, player.width, player.height);
-
-            // Draw obstacle items
-            for (let obs of obstacles) {
-                ctx.fillStyle = obs.color;
-                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
-            }
-
-            // Game over screen print
-            if (isGameOver) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
-                ctx.fillStyle = '#fff';
-                ctx.font = '24px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2);
-                
-                ctx.font = '14px Arial';
-                ctx.fillText("Refresh browser to retry", canvas.width / 2, canvas.height / 2 + 30);
-            }
-        }
-
-        // Perpetual animation runner loop
-        function loop() {
-            update();
-            render();
-            requestAnimationFrame(loop);
-        }
-
-        // Start execution
-        loop();
-    </script>
-</body>
-</html>
+<script>
+    const jokes = [
+        "Setup: What did Rick James say to Eddie Murphy's couch?\nPunchline: 'F*** yo couch, n****! Buy another one!'",
+        "Setup: Why did Dave leave a $50 million contract?\nPunchline: 'Because I wanted to see what would happen if I just walked away like a regular dude at a bad job.'",
+        "Setup: How does Clayton Bigsby view the world?\nPunchline: 'He's a blind white supremacist who has absolutely no idea he's black.'",
+        "Setup: What happens when Dave interacts with the police?\nPunchline: 'Sorry, officer... I didn't know I couldn't do that.'",
+        "Setup: Why is the 'Wrap It Up' button necessary?\nPunchline: 'Because some people simply do not know when their time on stage is officially over.'",
+        "Setup: How do you spot a truly dangerous neighborhood?\nPunchline: 'When you see a baby standing on the corner selling weed at 3:00 AM.'",
+        "Setup: What is Lil Jon's entire vocabulary?\nPunchline: 'YEAH! OKAY! WHAT?!'",
+        "Setup: What happens when Tyrone Biggums visits a school?\nPunchline: 'He starts giving a lecture on the structural integrity of a crack rock.'",
+        "Setup: Why did Prince beat Charlie Murphy in basketball?\nPunchline: 'Because Prince was incredibly good at hoops, and then he served everyone pancakes.'",
+        "Setup: What did Rick James say about his own wild behavior?\nPunchline: 'Cocaine is a hell of a drug.'",
+        "Setup: How does Dave describe the taste of a certain drink?\nPunchline: 'I don't want juice. I want that purple stuff. Water, sugar, purple.'",
+        "Setup: What is the real danger of a hostage situation?\nPunchline: 'When the negotiator tells the criminal to let the white people go first.'",
+        "Setup: Why did Silky Johnston win Player Hater of the Year?\nPunchline: 'Because he hated on everyone, including his own reflection.'",
+        "Setup: What happens when you go to a Wu-Tang Clan financial seminar?\nPunchline: 'They tell you that Wu-Tang Financial is strictly for the children.'",
+        "Setup: What did the robot say to the comedian?\nPunchline: 'Modern problems require modern solutions.'",
+        "Setup: Why don't people care about chivalry anymore?\nPunchline: 'Chivalry is dead. Women killed it.'",
+        "Setup: What is Dave's rule about broke people?\nPunchline: 'There is nothing quite as terrifying as a broke person with absolutely nothing to lose.'",
+        "Setup: How do you know you are getting old at a party?\nPunchline: 'When you look at the recycling bins and think, \"Man, they have a great system here.\"'",
+        "Setup: What did Dave say about the consequences of his actions?\nPunchline: 'You can't un-ring a bell, baby. You just gotta live with the sound of it.'",
+        "Setup: What happens when you sign a contract with a shady record label?\nPunchline: 'Making the Band makes you walk across the bridge just to get a cheesecake.'",
+        "Setup: What did the Mad Real World show us?\nPunchline: 'What happens when you put one white guy in a house with five aggressive roommates.'",
+        "Setup: What is Samuel Jackson's favorite beer?\nPunchline: 'IT'LL GET YOU DRUNK! YOU'LL BE ACCOMPANYING ME IN NO TIME!'",
+        "Setup: How does Dave handle a confrontation on the street?\nPunchline: 'I just yell out \"I'm rich, b****!\" and run away as fast as possible.'",
+        "Setup: What happens when you try to use logic during a robbery?\nPunchline: 'The robber just looks at you confused and asks why you're talking so much.'",
+        "Setup: Why did the Jedi choose Dave?\nPunchline: 'Because he was the only one who could handle a lightsaber while holding a cigarette.'",
+        "Setup: What did the News anchor say during the end of the world?\nPunchline: 'We are experiencing technical difficulties, but mostly just absolute chaos.'",
+        "Setup: How do you fix a bad comedy set?\nPunchline: 'Just drop the mic and walk away before they start throwing things.'",
+        "Setup: What did Tyrone Biggums want for breakfast?\nPunchline: 'A nice hot bowl of crack-o's to start the day right.'",
+        "Setup: Why did Dave talk to the baby on the street corner?\nPunchline: 'Because the baby was the only one open for business at that hour.'",
+        "Setup: What is the true definition of a hater?\nPunchline: 'Someone who travels back in time just to make sure your ancestors don't succeed.'",
+        "Setup: Why did the musician cross the road?\nPunchline: 'To get away from Rick James stomping on his couch.'",
+        "Setup: What did the police officer say to the wealthy guy?\nPunchline: 'Sir, please step out of the vehicle and stop being so casual.'",
+        "Setup: What is the most dangerous weapon in a comedy club?\nPunchline: 'A front-row audience member who thinks they are part of the act.'",
+        "Setup: Why don't old friends visit Dave anymore?\nPunchline: 'Because they are afraid they will end up as a character on a sketch show.'",
+        "Setup: What happens when the internet goes down?\nPunchline: 'People actually have to look at each other and realize they don't like each other.'",
+        "Setup: What did the doctor say to Dave about his throat?\nPunchline: 'Stop smoking or stop talking, but you can't do both on television.'",
+        "Setup: Why did the chicken cross the road?\nPunchline: 'Because the neighborhood was getting gentrified and it couldn't afford the rent.'",
+        "Setup: What is Dave's advice on marriage?\nPunchline: 'Just make sure your partner likes the exact same level of chaos as you do.'",
+        "Setup: How do you escape a bad conversation?\nPunchline: 'Hit the imaginary \"Wrap It Up\" button in your mind and walk backward.'",
+        "Setup: What is the secret to a great punchline?\nPunchline: 'Saying it with enough confidence that people think it's a true story.'",
+        "Setup: Why did the crowd laugh at a dark joke?\nPunchline: 'Because tragedy plus time equals comedy, but sometimes you just need two minutes.'",
+        "Setup: What did the producer say to the star?\nPunchline: 'We will give you millions, but you have to wear this ridiculous outfit.'",
+        "Setup: Why did Dave go to Africa?\nPunchline: 'To clear his head and get away from executives who kept calling him crazy.'",
+        "Setup: What happens when you mix politics with comedy?\nPunchline: 'Half the audience laughs, and the other half writes a very long letter.'",
+        "Setup: What did the fan say to Dave in Ohio?\nPunchline: 'Hey man, thanks for making our small town slightly more interesting.'",
+        "Setup: What is the problem with cancel culture?\nPunchline: 'You can't cancel someone who doesn't care about the validation anyway.'",
+        "Setup: Why did the comedian wear a suit on stage?\nPunchline: 'Because if the jokes bomb, at least I look like I'm going to a job interview.'",
+        "Setup: What did Clayton Bigsby do at the book signing?\nPunchline: 'He realization dropped when he took off his hood, but he still didn't believe it.'",
+        "Setup: Why did the audience member get called out?\nPunchline: 'Because you don't heckle a guy who literally has a microphone amplified to 500 watts.'",
+        "Setup: What is the funniest thing about a movie theater?\nPunchline: 'The fact that people will pay fifteen dollars to sit in the dark with strangers and chew loudly.'",
+        "Setup: How does Dave handle social media?\nPunchline: 'By completely avoiding it and letting everyone wonder if he's still alive.'",
+        "Setup: What did the old comedian tell the young comedian?\nPunchline: 'Don't worry about the money, just worry about staying funny.'",
+        "Setup: Why is the news so depressing?\nPunchline: 'Because they don't have a musical guest to cheer you up at the end.'",
+        "Setup: What happens when you win the lottery in a sketch?\nPunchline: 'You spend the entire budget on things that make no financial sense.'",
+        "Setup: Why did the alien visit Earth?\nPunchline: 'To watch stand-up comedy and wonder why the humans are laughing at their own misery.'",
