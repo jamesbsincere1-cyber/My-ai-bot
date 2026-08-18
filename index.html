@@ -175,17 +175,6 @@
             outline: none;
         }
         input:focus { border-color: #eab308; }
-        button {
-            background-color: #eab308;
-            color: #09090b;
-            border: none;
-            padding: 12px 24px;
-            font-size: 14px;
-            font-weight: 700;
-            border-radius: 9999px;
-            cursor: pointer;
-        }
-        button:hover { background-color: #ca8a04; }
 
         @keyframes bounce {
             0%, 80%, 100% { transform: scale(0); }
@@ -205,7 +194,7 @@
         <img class="profile-pic" src="https://unsplash.com" alt="Chappelle">
         <div class="sidebar-title">Dave &amp; Crew</div>
         <div class="sidebar-status">Online</div>
-        <div class="sidebar-desc">Type the word <strong>next</strong> into the message bar to get a new joke setup and punchline thread [1]!</div>
+        <div class="sidebar-desc">Simply type <strong>next</strong> into the message bar. The instant you finish spelling it, the joke sequence will trigger dynamically.</div>
     </div>
     
     <div class="chat-area">
@@ -214,19 +203,19 @@
             <div class="msg-row incoming">
                 <div class="msg-bubble">
                     <span class="msg-sender">System</span>
-                    Type <strong>next</strong> in the message box below and hit Send to start the show!
+                    Simply type <strong>next</strong> in the box below to start the script sequence. No need to click or hit Enter!
                 </div>
             </div>
         </div>
         <div class="chat-footer">
-            <input type="text" id="chatInput" placeholder="Type 'next' here..." onkeydown="if(event.key === 'Enter') handleSend()">
-            <button onclick="handleSend()">Send</button>
+            <input type="text" id="chatInput" placeholder="Just type 'next' to trigger..." oninput="checkAutomaticTrigger()">
         </div>
     </div>
 </div>
 
 <script>
     let audioCtx = null;
+    let isProcessing = false;
 
     function initAudio() {
         if (!audioCtx) {
@@ -281,4 +270,6 @@
         { s: `How do you spot a truly dangerous neighborhood?`, p: `"When you see a baby standing on the corner selling merchandise at 3:00 AM."` },
         { s: `What is Lil Jon's entire vocabulary?`, p: `"YEAH! OKAY! WHAT?!"` },
         { s: `What happens when Tyrone Biggums visits a school?`, p: `"He starts giving a lecture on the structural integrity of a sugar rock."` },
+        { s: `Why did Prince beat Charlie Murphy in basketball?`, p: `"Because Prince was incredibly good at hoops, and then he served everyone pancakes."` },
+        { s: `What did Rick James say about his own wild behavior?`, p: `"That stuff is a hell of a drug."` },
         
