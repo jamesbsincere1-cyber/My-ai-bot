@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dave Chappelle & Crew Live Chat Archive</title>
+    <title>Dave Chappelle Live Chat Archive</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
             background-color: #0d0d0f;
             color: #e4e4e7;
             display: flex;
@@ -51,7 +51,6 @@
             font-size: 20px;
             color: #f4f4f5;
             font-weight: 700;
-            margin-bottom: 5px;
             text-align: center;
         }
         .sidebar-status {
@@ -61,6 +60,7 @@
             align-items: center;
             gap: 6px;
             font-weight: 500;
+            margin-top: 5px;
         }
         .sidebar-status::before {
             content: '';
@@ -103,7 +103,6 @@
         .msg-row {
             display: flex;
             width: 100%;
-            animation: fadeIn 0.3s ease forwards;
         }
         .msg-row.incoming { justify-content: flex-start; }
         .msg-row.user { justify-content: flex-end; }
@@ -115,7 +114,6 @@
             border-radius: 18px;
             font-size: 15px;
             line-height: 1.5;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
         .incoming .msg-bubble {
             background-color: #27272a;
@@ -143,7 +141,6 @@
             opacity: 0.6;
         }
         
-        /* Typing indicator styling */
         .typing-indicator {
             display: flex;
             align-items: center;
@@ -177,9 +174,7 @@
             font-size: 14px;
             outline: none;
         }
-        input:focus {
-            border-color: #eab308;
-        }
+        input:focus { border-color: #eab308; }
         button {
             background-color: #eab308;
             color: #09090b;
@@ -189,14 +184,9 @@
             font-weight: 700;
             border-radius: 9999px;
             cursor: pointer;
-            transition: all 0.2s;
         }
         button:hover { background-color: #ca8a04; }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
         @keyframes bounce {
             0%, 80%, 100% { transform: scale(0); }
             40% { transform: scale(1.0); }
@@ -212,10 +202,10 @@
 
 <div class="chat-dashboard">
     <div class="sidebar">
-        <img class="profile-pic" src="https://unsplash.com" alt="Chappelle & Crew">
+        <img class="profile-pic" src="https://unsplash.com" alt="Chappelle">
         <div class="sidebar-title">Dave &amp; Crew</div>
         <div class="sidebar-status">Online</div>
-        <div class="sidebar-desc">An absolute message archive engine. Type "next" into the entry field below to progress the comedy log.</div>
+        <div class="sidebar-desc">Type the word <strong>next</strong> into the message bar to get a new joke setup and punchline thread [1]!</div>
     </div>
     
     <div class="chat-area">
@@ -224,7 +214,7 @@
             <div class="msg-row incoming">
                 <div class="msg-bubble">
                     <span class="msg-sender">System</span>
-                    Type <strong>next</strong> in the message box below to get started!
+                    Type <strong>next</strong> in the message box below and hit Send to start the show!
                 </div>
             </div>
         </div>
@@ -236,9 +226,19 @@
 </div>
 
 <script>
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let audioCtx = null;
+
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
 
     function playMessageChime() {
+        initAudio();
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = "sine";
@@ -253,6 +253,7 @@
     }
 
     function playLaughTrack() {
+        initAudio();
         for (let i = 0; i < 6; i++) {
             setTimeout(() => {
                 const osc = audioCtx.createOscillator();
@@ -279,4 +280,5 @@
         { s: `Why is the Wrap It Up button necessary?`, p: `"Because some people simply do not know when their time on stage is officially over."` },
         { s: `How do you spot a truly dangerous neighborhood?`, p: `"When you see a baby standing on the corner selling merchandise at 3:00 AM."` },
         { s: `What is Lil Jon's entire vocabulary?`, p: `"YEAH! OKAY! WHAT?!"` },
+        { s: `What happens when Tyrone Biggums visits a school?`, p: `"He starts giving a lecture on the structural integrity of a sugar rock."` },
         
