@@ -25,7 +25,7 @@
             box-shadow: 0 20px 40px rgba(0,0,0,0.7);
             max-width: 950px;
             width: 100%;
-            height: 600px;
+            height: 650px;
             overflow: hidden;
         }
         .sidebar {
@@ -98,10 +98,12 @@
             display: flex;
             flex-direction: column;
             gap: 20px;
+            scroll-behavior: smooth;
         }
         .msg-row {
             display: flex;
             width: 100%;
+            animation: fadeIn 0.3s ease forwards;
         }
         .msg-row.incoming { justify-content: flex-start; }
         .msg-row.user { justify-content: flex-end; }
@@ -121,7 +123,7 @@
             border-bottom-left-radius: 4px;
         }
         .user .msg-bubble {
-            background-color: #3b82f6;
+            background-color: #2563eb;
             color: #ffffff;
             border-bottom-right-radius: 4px;
         }
@@ -140,6 +142,24 @@
             display: block;
             opacity: 0.6;
         }
+        
+        /* Typing indicator styling */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 4px;
+        }
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #a1a1aa;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
         .chat-footer {
             padding: 15px 20px;
             background-color: #18181b;
@@ -172,6 +192,16 @@
             transition: all 0.2s;
         }
         button:hover { background-color: #ca8a04; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
+        }
+
         @media (max-width: 768px) {
             .chat-dashboard { flex-direction: column; height: auto; }
             .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #27272a; }
@@ -184,12 +214,12 @@
     <div class="sidebar">
         <img class="profile-pic" src="https://unsplash.com" alt="Chappelle & Crew">
         <div class="sidebar-title">Dave &amp; Crew</div>
-        <div class="sidebar-status">Live Archive</div>
-        <div class="sidebar-desc">Type "next" into the text bar to generate the performance blocks sequentially.</div>
+        <div class="sidebar-status">Online</div>
+        <div class="sidebar-desc">An absolute message archive engine. Type "next" into the entry field below to progress the comedy log.</div>
     </div>
     
     <div class="chat-area">
-        <div class="chat-header">Retro Comedy Session</div>
+        <div class="chat-header">Chappelle Retrospective Session</div>
         <div class="chat-history" id="chatHistory">
             <div class="msg-row incoming">
                 <div class="msg-bubble">
@@ -249,11 +279,4 @@
         { s: `Why is the Wrap It Up button necessary?`, p: `"Because some people simply do not know when their time on stage is officially over."` },
         { s: `How do you spot a truly dangerous neighborhood?`, p: `"When you see a baby standing on the corner selling merchandise at 3:00 AM."` },
         { s: `What is Lil Jon's entire vocabulary?`, p: `"YEAH! OKAY! WHAT?!"` },
-        { s: `What happens when Tyrone Biggums visits a school?`, p: `"He starts giving a lecture on the structural integrity of a sugar rock."` },
-        { s: `Why did Prince beat Charlie Murphy in basketball?`, p: `"Because Prince was incredibly good at hoops, and then he served everyone pancakes."` },
-        { s: `What did Rick James say about his own wild behavior?`, p: `"That stuff is a hell of a drug."` },
-        { s: `How does Dave describe the taste of a certain childhood drink?`, p: `"I don't want juice. I want that purple stuff. Water, sugar, purple."` },
-        { s: `What is the real danger of a hostage situation?`, p: `"When the negotiator tells the criminal to let the nice people go first."` },
-        { s: `Why did Silky Johnston win Player Hater of the Year?`, p: `"Because he hated on everyone, including his own reflection."` },
-        { s: `What happens when you go to a Wu-Tang Clan financial seminar?`, p: `"They tell you that Wu-Tang Financial is strictly for the children."` },
-    
+        
