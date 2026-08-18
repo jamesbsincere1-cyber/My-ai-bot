@@ -162,17 +162,17 @@
             background-color: #18181b;
             border-top: 1px solid #27272a;
             display: flex;
-            gap: 10px;
         }
         input {
             flex: 1;
             background-color: #09090b;
             border: 1px solid #27272a;
             border-radius: 9999px;
-            padding: 12px 20px;
+            padding: 15px 25px;
             color: #f4f4f5;
             font-size: 14px;
             outline: none;
+            text-align: center;
         }
         input:focus { border-color: #eab308; }
 
@@ -203,12 +203,12 @@
             <div class="msg-row incoming">
                 <div class="msg-bubble">
                     <span class="msg-sender">System</span>
-                    Simply type <strong>next</strong> in the box below to start the script sequence. No need to click or hit Enter!
+                    Simply type <strong>next</strong> in the box below to start the script sequence. No buttons needed!
                 </div>
             </div>
         </div>
         <div class="chat-footer">
-            <input type="text" id="chatInput" placeholder="Just type 'next' to trigger..." oninput="checkAutomaticTrigger()">
+            <input type="text" id="chatInput" placeholder="Just type 'next' here to trigger..." oninput="checkAutomaticTrigger()">
         </div>
     </div>
 </div>
