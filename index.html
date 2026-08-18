@@ -172,7 +172,6 @@
             color: #f4f4f5;
             font-size: 14px;
             outline: none;
-            text-align: center;
         }
         input:focus { border-color: #eab308; }
 
@@ -194,7 +193,7 @@
         <img class="profile-pic" src="https://unsplash.com" alt="Chappelle">
         <div class="sidebar-title">Dave &amp; Crew</div>
         <div class="sidebar-status">Online</div>
-        <div class="sidebar-desc">Simply type <strong>next</strong> into the message bar. The instant you finish spelling it, the joke sequence will trigger dynamically.</div>
+        <div class="sidebar-desc">Type your message and press Enter to chat with the archive engine.</div>
     </div>
     
     <div class="chat-area">
@@ -203,12 +202,12 @@
             <div class="msg-row incoming">
                 <div class="msg-bubble">
                     <span class="msg-sender">System</span>
-                    Simply type <strong>next</strong> in the box below to start the script sequence. No buttons on screen!
+                    Type a message below and press <strong>Enter</strong> to begin the conversation!
                 </div>
             </div>
         </div>
         <div class="chat-footer">
-            <input type="text" id="chatInput" placeholder="Just type 'next' here to trigger..." oninput="checkAutomaticTrigger()">
+            <input type="text" id="chatInput" placeholder="Type a message here..." onkeydown="if(event.key === 'Enter') handleSend()">
         </div>
     </div>
 </div>
@@ -272,3 +271,4 @@
         { s: `What happens when Tyrone Biggums visits a school?`, p: `"He starts giving a lecture on the structural integrity of a sugar rock."` },
         { s: `Why did Prince beat Charlie Murphy in basketball?`, p: `"Because Prince was incredibly good at hoops, and then he served everyone pancakes."` },
         { s: `What did Rick James say about his own wild behavior?`, p: `"That stuff is a hell of a drug."` },
+        { s: `How does Dave describe the taste of a certain childhood drink?`, p: `"I don't want juice. I want that purple stuff. Water, sugar, purple."` },
