@@ -126,7 +126,7 @@
     </div>
 
     <div id="chat-container">
-        <div class="message ai">System Ready. Storing key credential. Type below to converse.</div>
+        <div class="message ai">System Updated. Key formatting patched. Type below to text your AI.</div>
     </div>
 
     <div id="input-container">
@@ -147,7 +147,7 @@
         let conversationHistory = [];
 
         window.addEventListener('DOMContentLoaded', () => {
-            const savedKey = localStorage.getItem('gemini_key_v2');
+            const savedKey = localStorage.getItem('gemini_key_v3');
             if (savedKey) {
                 apiKeyInput.value = savedKey;
                 saveKeyCheckbox.checked = true;
@@ -172,9 +172,9 @@
             }
 
             if (saveKeyCheckbox.checked) {
-                localStorage.setItem('gemini_key_v2', apiKey);
+                localStorage.setItem('gemini_key_v3', apiKey);
             } else {
-                localStorage.removeItem('gemini_key_v2');
+                localStorage.removeItem('gemini_key_v3');
             }
 
             userInput.value = '';
@@ -187,13 +187,10 @@
             const aiMessageDiv = appendMessage('Thinking...', 'ai');
 
             try {
-                // Modified headers to appropriately comply with newer cloud authorization methods
-                const response = await fetch(`https://googleapis.com`, {
+                // Passing the key securely in the URL resolves CORS fetch blocks on mobile devices
+                const response = await fetch(`https://googleapis.com{apiKey}`, {
                     method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'x-goog-api-key': apiKey
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ contents: conversationHistory })
                 });
 
