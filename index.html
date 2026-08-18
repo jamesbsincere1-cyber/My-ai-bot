@@ -3,235 +3,252 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Text AI</title>
+    <title>TERMINAL HACKER 2099</title>
     <style>
         :root {
-            --bg-color: #131314;
-            --chat-bg: #1e1e20;
-            --text-color: #e3e3e3;
-            --user-msg: #2b2a33;
-            --ai-msg: #1e1e20;
-            --accent: #a8c7fa;
-            --input-bg: #282a2d;
+            --bg-color: #0a0a0c;
+            --text-color: #33ff33;
+            --dim-text: #1a881a;
+            --alert-color: #ff3333;
+            --input-bg: #141416;
+            --panel-bg: #111113;
         }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: 'Courier New', Courier, monospace;
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
+            padding: 0;
             display: flex;
             flex-direction: column;
             height: 100vh;
+            overflow: hidden;
         }
-        #config-bar {
+
+        #header {
             background-color: #000;
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            border-bottom: 1px solid #333;
-        }
-        #api-key-input {
-            width: 100%;
-            background: var(--input-bg);
-            border: 1px solid #444;
-            color: #fff;
             padding: 10px;
-            border-radius: 6px;
-            font-size: 14px;
-            box-sizing: border-box;
+            font-size: 12px;
+            text-align: center;
+            border-bottom: 2px solid var(--dim-text);
+            letter-spacing: 2px;
         }
-        .save-container {
+
+        #stats-bar {
+            background-color: var(--panel-bg);
+            padding: 8px 15px;
             display: flex;
-            align-items: center;
-            gap: 8px;
+            justify-content: space-between;
             font-size: 13px;
-            color: #aaa;
+            border-bottom: 1px solid var(--dim-text);
         }
-        #chat-container {
+
+        #terminal-box {
             flex: 1;
             overflow-y: auto;
-            padding: 20px;
+            padding: 15px;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 12px;
+            font-size: 14px;
+            line-height: 1.4;
         }
-        .message {
-            max-width: 85%;
-            padding: 12px 16px;
-            border-radius: 18px;
-            line-height: 1.5;
-            font-size: 15px;
+
+        .line {
             word-wrap: break-word;
+            white-space: pre-wrap;
         }
-        .user {
-            background-color: var(--user-msg);
-            align-self: flex-end;
-            border-bottom-right-radius: 4px;
-        }
-        .ai {
-            background-color: var(--ai-msg);
-            align-self: flex-start;
-            border-bottom-left-radius: 4px;
-            border: 1px solid #333;
-        }
-        #input-container {
-            padding: 15px;
-            background-color: var(--bg-color);
-        }
-        #input-form {
+
+        .system { color: #8888ff; }
+        .success { color: var(--text-color); }
+        .warning { color: #ffff33; }
+        .danger { color: var(--alert-color); font-weight: bold; }
+        .user-cmd { color: #ffffff; }
+
+        #input-area {
+            padding: 12px;
+            background-color: #000;
+            border-top: 1px solid var(--dim-text);
             display: flex;
-            background: var(--input-bg);
-            border-radius: 28px;
-            padding: 6px 12px;
-            border: 1px solid #444;
             align-items: center;
+            gap: 8px;
         }
-        #user-input {
+
+        #prompt {
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        #cmd-input {
             flex: 1;
             background: transparent;
             border: none;
-            color: var(--text-color);
-            padding: 10px;
+            color: #ffffff;
+            font-family: inherit;
             font-size: 16px;
             outline: none;
-            resize: none;
-            height: 24px;
-            font-family: inherit;
         }
-        #send-btn {
-            background: var(--accent);
-            color: #042100;
+
+        #submit-btn {
+            background: var(--dim-text);
+            color: #000;
             border: none;
-            border-radius: 20px;
-            padding: 8px 16px;
+            padding: 6px 16px;
+            font-family: inherit;
             font-weight: bold;
             cursor: pointer;
-            font-size: 14px;
+            border-radius: 4px;
         }
-        #send-btn:disabled {
-            background: #444;
-            color: #777;
+
+        #submit-btn:active {
+            background: var(--text-color);
         }
     </style>
 </head>
 <body>
 
-    <div id="config-bar">
-        <input type="password" id="api-key-input" placeholder="Paste your AQ. Key here..." />
-        <div class="save-container">
-            <input type="checkbox" id="save-key-checkbox">
-            <label for="save-key-checkbox">Remember Key on this Phone</label>
-        </div>
+    <div id="header">=== NEO-BROOKLYN SUBNET TERMINAL v4.21 ===</div>
+    
+    <div id="stats-bar">
+        <span>RAM: <span id="ram-stat">4.0 GB</span></span>
+        <span>SECURITY LEVEL: <span id="sec-stat" class="warning">LOW</span></span>
+        <span>SCORE: <span id="score-stat">0</span></span>
     </div>
 
-    <div id="chat-container">
-        <div class="message ai">System Updated. Key formatting patched. Type below to text your AI.</div>
+    <div id="terminal-box">
+        <div class="line system">[SYSTEM INITIALIZED] Welcome, Operative.</div>
+        <div class="line">You have booted a low-profile terminal link into a stolen corporate data drive. Your grid location is currently hidden, but scanning software is looking for you.</div>
+        <div class="line warning">Type "help" to view a list of available terminal sub-commands.</div>
     </div>
 
-    <div id="input-container">
-        <form id="input-form">
-            <textarea id="user-input" placeholder="Message your AI..." required></textarea>
-            <button type="submit" id="send-btn">Send</button>
-        </form>
+    <div id="input-area">
+        <span id="prompt">root@cyberdeck:~$</span>
+        <input type="text" id="cmd-input" placeholder="Type a command..." autocomplete="off" autocapitalize="off">
+        <button id="submit-btn">EXEC</button>
     </div>
 
     <script>
-        const chatContainer = document.getElementById('chat-container');
-        const inputForm = document.getElementById('input-form');
-        const userInput = document.getElementById('user-input');
-        const apiKeyInput = document.getElementById('api-key-input');
-        const saveKeyCheckbox = document.getElementById('save-key-checkbox');
-        const sendBtn = document.getElementById('send-btn');
+        const terminal = document.getElementById('terminal-box');
+        const input = document.getElementById('cmd-input');
+        const button = document.getElementById('submit-btn');
+        
+        const ramStat = document.getElementById('ram-stat');
+        const secStat = document.getElementById('sec-stat');
+        const scoreStat = document.getElementById('score-stat');
 
-        let conversationHistory = [];
+        let gameState = {
+            ram: 4.0,
+            security: 'LOW',
+            score: 0,
+            stage: 'start', // start, broken, bypassed, complete
+            attempts: 0
+        };
 
-        window.addEventListener('DOMContentLoaded', () => {
-            const savedKey = localStorage.getItem('gemini_key_v3');
-            if (savedKey) {
-                apiKeyInput.value = savedKey;
-                saveKeyCheckbox.checked = true;
-            }
-        });
+        // Command processing hub
+        function runCommand() {
+            const cmd = input.value.trim().toLowerCase();
+            if (!cmd) return;
 
-        userInput.addEventListener('input', function() {
-            this.style.height = '24px';
-            this.style.height = (this.scrollHeight - 10) + 'px';
-        });
+            // Output user's typed command to the screen
+            appendLine(`root@cyberdeck:~$ ${input.value}`, 'user-cmd');
+            input.value = '';
 
-        inputForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const text = userInput.value.trim();
-            const apiKey = apiKeyInput.value.trim();
-
-            if (!text) return;
-            if (!apiKey) {
-                alert("Please paste your key.");
-                return;
-            }
-
-            if (saveKeyCheckbox.checked) {
-                localStorage.setItem('gemini_key_v3', apiKey);
-            } else {
-                localStorage.removeItem('gemini_key_v3');
-            }
-
-            userInput.value = '';
-            userInput.style.height = '24px';
-            setLoading(true);
-
-            appendMessage(text, 'user');
-            conversationHistory.push({ role: "user", parts: [{ text: text }] });
-
-            const aiMessageDiv = appendMessage('Thinking...', 'ai');
-
-            try {
-                // Passing the key securely in the URL resolves CORS fetch blocks on mobile devices
-                const response = await fetch(`https://googleapis.com{apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: conversationHistory })
-                });
-
-                const data = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(data.error?.message || 'Connection failed.');
+            // Core Game Logic Loop
+            if (cmd === 'help') {
+                appendLine('Available Core Sub-commands:\n' +
+                           '  [help]     Display this directory layout.\n' +
+                           '  [scan]     Analyze the encrypted corporate core drive.\n' +
+                           '  [overclock] Instantly boost your system memory (+RAM).\n' +
+                           '  [bypass]   Attempt to crack the active tracking script.\n' +
+                           '  [clear]    Wipe the terminal display screen.', 'warning');
+            } 
+            else if (cmd === 'clear') {
+                terminal.innerHTML = '';
+            } 
+            else if (cmd === 'overclock') {
+                if (gameState.ram >= 16.0) {
+                    appendLine('[-] WARNING: Motherboard temperature critical. Overclock limit reached!', 'danger');
+                } else {
+                    gameState.ram += 4.0;
+                    ramStat.innerText = `${gameState.ram.toFixed(1)} GB`;
+                    appendLine(`[+] SUCCESS: Voltage increased. RAM boosted to ${gameState.ram.toFixed(1)} GB! System stability declining.`, 'success');
+                }
+            } 
+            else if (cmd === 'scan') {
+                if (gameState.stage === 'start') {
+                    appendLine('[*] SCANNING ENGINE INITIALIZED...', 'system');
+                    setTimeout(() => {
+                        appendLine('[!] TARGET FOUND: Enclave_Data_Vault_7.bin detected.\n' +
+                                   '[!] SECURITY ALERT: An active tracking node is monitoring this drive.\n' +
+                                   '>> Run [bypass] to crack the protection sequence.', 'warning');
+                        gameState.stage = 'scanned';
+                    }, 500);
+                } else {
+                    appendLine('[*] SCAN RESULT: Target drive active. Trace defense running. Use [bypass] immediately.', 'warning');
+                }
+            } 
+            else if (cmd === 'bypass') {
+                if (gameState.stage === 'start') {
+                    appendLine('[-] ERROR: No compilation target loaded. Run a [scan] first.', 'danger');
+                    return;
+                }
+                if (gameState.stage === 'complete') {
+                    appendLine('[+] SYSTEM MESSAGE: Subnet cleared. No active blocks left.', 'success');
+                    return;
                 }
 
-                const aiResponseText = data.candidates[0].content.parts[0].text;
-                aiMessageDiv.innerText = aiResponseText;
-                
-                conversationHistory.push({ role: "model", parts: [{ text: aiResponseText }] });
-                chatContainer.scrollTop = chatContainer.scrollHeight;
+                appendLine('[*] EXECUTING CRACK INJECTOR...', 'system');
+                gameState.attempts++;
 
-            } catch (error) {
-                aiMessageDiv.innerText = `Error: ${error.message}`;
-                aiMessageDiv.style.color = '#ff6b6b';
-            } finally {
-                setLoading(false);
+                setTimeout(() => {
+                    // Check if player has enough RAM to guarantee success
+                    if (gameState.ram >= 12.0) {
+                        gameState.score += 250;
+                        gameState.stage = 'complete';
+                        secStat.innerText = 'CLEARED';
+                        secStat.className = 'success';
+                        scoreStat.innerText = gameState.score;
+                        appendLine('[+++] ACCESS GRANTED [+++]\n' +
+                                   'The tracking script has been purged! You successfully extracted the software kernel.\n' +
+                                   'Neo-Brooklyn underground networks credit you +250 Credits. Mission Complete!', 'success');
+                    } else {
+                        // Not enough RAM - Security level increases
+                        if (gameState.attempts === 1) {
+                            gameState.security = 'MEDIUM';
+                            secStat.innerText = 'MEDIUM';
+                            secStat.className = 'warning';
+                            appendLine('[-] INJECTOR FAILED: Your system memory buffer overflowed. The encryption repelled the attack.\n' +
+                                       '[!] TRACE ALARM: Security tracker warning levels rising. Boost your memory capacity!', 'danger');
+                        } else {
+                            gameState.security = 'CRITICAL';
+                            secStat.innerText = 'CRITICAL';
+                            secStat.className = 'danger';
+                            appendLine('[!!!] SECURITY BREACHED [!!!]\n' +
+                                       'Corp defense matrix deployed a counter-virus. Your location was pin-pointed.\n' +
+                                       'GAME OVER. Refresh the page or type "overclock" then "bypass" to try again with a better strategy.', 'danger');
+                        }
+                    }
+                }, 800);
+            } 
+            else {
+                appendLine(`[-] Command not recognized: "${cmd}". Type "help" for a layout structure map.`, 'danger');
             }
+        }
+
+        function appendLine(text, className = '') {
+            const div = document.createElement('div');
+            div.className = `line ${className}`;
+            div.innerText = text;
+            terminal.appendChild(div);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        // Handle both button click and enter key inputs
+        button.addEventListener('click', runCommand);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') runCommand();
         });
-
-        function appendMessage(text, sender) {
-            const msgDiv = document.createElement('div');
-            msgDiv.classList.add('message', sender);
-            msgDiv.innerText = text;
-            chatContainer.appendChild(msgDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-            return msgDiv;
-        }
-
-        function setLoading(isLoading) {
-            if (isLoading) {
-                sendBtn.disabled = true;
-                sendBtn.innerText = "...";
-            } else {
-                sendBtn.disabled = false;
-                sendBtn.innerText = "Send";
-            }
-        }
     </script>
 </body>
 </html>
