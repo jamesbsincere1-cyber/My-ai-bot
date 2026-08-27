@@ -3,272 +3,190 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dave Chappelle Live Chat Archive</title>
+    <title>Serverless Random Video Matcher</title>
+    <!-- PeerJS manages completely free, auto-scaling WebRTC matchmaking tunnels -->
+    <script src="https://unpkg.com"></script>
     <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-            background-color: #0d0d0f;
-            color: #e4e4e7;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: #0e121a;
+            color: #fff;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        h1 {
+            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        .status-banner {
+            margin: 15px auto;
+            padding: 12px 24px;
+            width: 320px;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 30px;
+            font-weight: bold;
+            color: #38bdf8;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .video-container {
             display: flex;
             justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        .chat-dashboard {
-            display: flex;
-            background-color: #18181b;
-            border: 1px solid #27272a;
-            border-radius: 16px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.7);
-            max-width: 950px;
-            width: 100%;
-            height: 650px;
-            overflow: hidden;
-        }
-        .sidebar {
-            width: 320px;
-            background-color: #09090b;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 30px 20px;
-            border-right: 1px solid #27272a;
-            box-sizing: border-box;
-        }
-        .profile-pic {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 3px solid #eab308;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
-            margin-bottom: 20px;
-        }
-        .sidebar-title {
-            font-size: 20px;
-            color: #f4f4f5;
-            font-weight: 700;
-            text-align: center;
-        }
-        .sidebar-status {
-            font-size: 13px;
-            color: #22c55e;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-weight: 500;
-            margin-top: 5px;
-        }
-        .sidebar-status::before {
-            content: '';
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            background-color: #22c55e;
-            border-radius: 50%;
-        }
-        .sidebar-desc {
-            font-size: 13px;
-            color: #71717a;
-            text-align: center;
-            margin-top: 25px;
-            line-height: 1.5;
-        }
-        .chat-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background-color: #111113;
-        }
-        .chat-header {
-            padding: 20px 30px;
-            background-color: #18181b;
-            border-bottom: 1px solid #27272a;
-            font-weight: 600;
-            font-size: 16px;
-            color: #f4f4f5;
-        }
-        .chat-history {
-            flex: 1;
-            padding: 30px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
             gap: 20px;
-            scroll-behavior: smooth;
-        }
-        .msg-row {
-            display: flex;
+            margin-top: 20px;
+            flex-wrap: wrap;
             width: 100%;
+            max-width: 900px;
         }
-        .msg-row.incoming { justify-content: flex-start; }
-        .msg-row.user { justify-content: flex-end; }
-        .msg-row.outgoing { justify-content: flex-start; }
-        
-        .msg-bubble {
-            max-width: 70%;
-            padding: 14px 18px;
-            border-radius: 18px;
-            font-size: 15px;
-            line-height: 1.5;
+        .video-box {
+            width: 400px;
+            height: 300px;
+            background: #111827;
+            border: 2px solid #374151;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
         }
-        .incoming .msg-bubble {
-            background-color: #27272a;
-            color: #f4f4f5;
-            border-bottom-left-radius: 4px;
+        h3 { color: #9ca3af; margin-bottom: 8px; font-weight: 500; text-align: left; padding-left: 5px;}
+        video { width: 100%; height: 100%; object-fit: cover; }
+        #localVideo { transform: scaleX(-1); } /* Mirror local cam naturally */
+        .controls { margin-top: 25px; display: flex; gap: 10px; }
+        button {
+            padding: 12px 28px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
         }
-        .user .msg-bubble {
-            background-color: #2563eb;
-            color: #ffffff;
-            border-bottom-right-radius: 4px;
-        }
-        .outgoing .msg-bubble {
-            background-color: #eab308;
-            color: #09090b;
-            font-weight: 600;
-            border-bottom-left-radius: 4px;
-        }
-        .msg-sender {
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 4px;
-            display: block;
-            opacity: 0.6;
-        }
-        
-        .typing-indicator {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            padding: 8px 4px;
-        }
-        .typing-dot {
-            width: 8px;
-            height: 8px;
-            background-color: #a1a1aa;
-            border-radius: 50%;
-            animation: bounce 1.4s infinite ease-in-out both;
-        }
-        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
-        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
-
-        .chat-footer {
-            padding: 15px 20px;
-            background-color: #18181b;
-            border-top: 1px solid #27272a;
-            display: flex;
-        }
-        input {
-            flex: 1;
-            background-color: #09090b;
-            border: 1px solid #27272a;
-            border-radius: 9999px;
-            padding: 15px 25px;
-            color: #f4f4f5;
-            font-size: 14px;
-            outline: none;
-        }
-        input:focus { border-color: #eab308; }
-
-        @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1.0); }
-        }
-
-        @media (max-width: 768px) {
-            .chat-dashboard { flex-direction: column; height: auto; }
-            .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #27272a; }
+        button:active { transform: scale(0.98); }
+        #startButton { background-color: #2563eb; }
+        #matchButton { background-color: #10b981; }
+        #nextButton { background-color: #ef4444; }
+        button:disabled {
+            background-color: #374151 !important;
+            color: #4b5563 !important;
+            cursor: not-allowed;
+            transform: none !important;
         }
     </style>
 </head>
 <body>
 
-<div class="chat-dashboard">
-    <div class="sidebar">
-        <img class="profile-pic" src="https://unsplash.com" alt="Chappelle">
-        <div class="sidebar-title">Dave &amp; Crew</div>
-        <div class="sidebar-status">Online</div>
-        <div class="sidebar-desc">Type your message and press Enter to chat with the archive engine.</div>
-    </div>
-    
-    <div class="chat-area">
-        <div class="chat-header">Chappelle Retrospective Session</div>
-        <div class="chat-history" id="chatHistory">
-            <div class="msg-row incoming">
-                <div class="msg-bubble">
-                    <span class="msg-sender">System</span>
-                    Type a message below and press <strong>Enter</strong> to begin the conversation!
-                </div>
-            </div>
+    <h1>Random Video Matcher</h1>
+    <div id="statusBox" class="status-banner">Status: Camera Offline</div>
+
+    <div class="video-container">
+        <div>
+            <h3>You</h3>
+            <div class="video-box"><video id="localVideo" autoplay playsinline muted></video></div>
         </div>
-        <div class="chat-footer">
-            <input type="text" id="chatInput" placeholder="Type a message here..." onkeydown="if(event.key === 'Enter') handleSend()">
+        <div>
+            <h3>Stranger</h3>
+            <div class="video-box"><video id="remoteVideo" autoplay playsinline></video></div>
         </div>
     </div>
-</div>
 
-<script>
-    let audioCtx = null;
-    let isProcessing = false;
+    <div class="controls">
+        <button id="startButton">1. Start Camera</button>
+        <button id="matchButton" disabled>2. Find Someone</button>
+        <button id="nextButton" disabled>Skip / Next</button>
+    </div>
 
-    function initAudio() {
-        if (!audioCtx) {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (audioCtx.state === 'suspended') {
-            audioCtx.resume();
-        }
-    }
+    <script>
+        const startButton = document.getElementById('startButton');
+        const matchButton = document.getElementById('matchButton');
+        const nextButton = document.getElementById('nextButton');
+        const statusBox = document.getElementById('statusBox');
+        
+        const localVideo = document.getElementById('localVideo');
+        const remoteVideo = document.getElementById('remoteVideo');
 
-    function playMessageChime() {
-        initAudio();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.15);
-    }
+        let localStream = null;
+        let myPeer = null;
+        let currentCall = null;
 
-    function playLaughTrack() {
-        initAudio();
-        for (let i = 0; i < 6; i++) {
-            setTimeout(() => {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = "triangle";
-                const baseFreq = 150 + Math.random() * 80;
-                osc.frequency.setValueAtTime(baseFreq, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(baseFreq - 40, audioCtx.currentTime + 0.2);
-                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.25);
-            }, i * 45);
-        }
-    }
+        // Use a fixed room token so you and your brother route to the exact same lobby pool
+        const roomKey = "cyber-chat-room-v2";
 
-    const jokes = [
-        { s: `What did Rick James say to Eddie Murphy's couch?`, p: `"F*** yo couch! Buy another one!"` },
-        { s: `Why did Dave leave a $50 million contract?`, p: `"Because I wanted to see what would happen if I just walked away like a regular dude at a bad job."` },
-        { s: `How does Clayton Bigsby view the world?`, p: `"He is a blind supremacist who has absolutely no idea what he actually looks like."` },
-        { s: `What happens when Dave interacts with the police?`, p: `"Sorry, officer... I didn't know I couldn't do that."` },
-        { s: `Why is the Wrap It Up button necessary?`, p: `"Because some people simply do not know when their time on stage is officially over."` },
-        { s: `How do you spot a truly dangerous neighborhood?`, p: `"When you see a baby standing on the corner selling merchandise at 3:00 AM."` },
-        { s: `What is Lil Jon's entire vocabulary?`, p: `"YEAH! OKAY! WHAT?!"` },
-        { s: `What happens when Tyrone Biggums visits a school?`, p: `"He starts giving a lecture on the structural integrity of a sugar rock."` },
-        { s: `Why did Prince beat Charlie Murphy in basketball?`, p: `"Because Prince was incredibly good at hoops, and then he served everyone pancakes."` },
-        { s: `What did Rick James say about his own wild behavior?`, p: `"That stuff is a hell of a drug."` },
-        { s: `How does Dave describe the taste of a certain childhood drink?`, p: `"I don't want juice. I want that purple stuff. Water, sugar, purple."` },
+        // 1. Unblock Android camera hardware
+        startButton.onclick = async () => {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                localVideo.srcObject = localStream;
+                statusBox.innerText = "Status: Camera Ready.";
+                startButton.disabled = true;
+                matchButton.disabled = false;
+            } catch (e) {
+                alert(`Camera Error: ${e.message}`);
+            }
+        };
+
+        // 2. Automate matchmaking pool using PeerJS dynamic rooms
+        matchButton.onclick = () => {
+            matchButton.disabled = true;
+            nextButton.disabled = false;
+            statusBox.innerText = "Status: Connecting to matchmaker...";
+
+            // Connect a peer node pointing directly to free open servers
+            myPeer = new Peer(roomKey + "-peer-A");
+
+            myPeer.on('open', (id) => {
+                statusBox.innerText = "Status: Lobby open. Waiting for partner...";
+                
+                // If you are Peer A, wait for Peer B to call you
+                myPeer.on('call', (incomingCall) => {
+                    currentCall = incomingCall;
+                    incomingCall.answer(localStream);
+                    incomingCall.on('stream', (remoteStream) => {
+                        remoteVideo.srcObject = remoteStream;
+                        statusBox.innerText = "Status: Connected to stranger!";
+                    });
+                });
+            });
+
+            // If Peer A is already active in the lobby, join as Peer B and call them
+            myPeer.on('error', (err) => {
+                if (err.type === 'unavailable-id') {
+                    myPeer = new Peer(); 
+                    myPeer.on('open', () => {
+                        statusBox.innerText = "Status: Match found! Launching stream...";
+                        const call = myPeer.call(roomKey + "-peer-A", localStream);
+                        currentCall = call;
+                        
+                        call.on('stream', (remoteStream) => {
+                            remoteVideo.srcObject = remoteStream;
+                            statusBox.innerText = "Status: Connected to stranger!";
+                        });
+                    });
+                } else {
+                    console.error("PeerJS Fault:", err);
+                    statusBox.innerText = "Status: Retrying connection...";
+                    setTimeout(() => matchButton.click(), 1000);
+                }
+            });
+        };
+
+        // 3. Skip / Reset current call rooms instantly
+        nextButton.onclick = () => {
+            if (currentCall) { currentCall.close(); currentCall = null; }
+            if (myPeer) { myPeer.destroy(); myPeer = null; }
+            remoteVideo.srcObject = null;
+            
+            // Re-trigger the matchmaking search automatically
+            matchButton.click();
+        };
+    </script>
+</body>
+</html>
