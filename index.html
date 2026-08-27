@@ -42,6 +42,24 @@
             display: none;
         }
         .btn:hover { background: #008c95; }
+        
+        /* Progress Container Styles */
+        .progress-container {
+            margin-top: 20px;
+            background: #222229;
+            border-radius: 20px;
+            height: 20px;
+            width: 100%;
+            overflow: hidden;
+            display: none;
+        }
+        .progress-bar {
+            background: #00adb5;
+            height: 100%;
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+        
         #status {
             margin-top: 15px;
             font-size: 14px;
@@ -54,18 +72,22 @@
 <body>
 
     <h2>Offline Video Upscaler</h2>
-    <p>Upscales video formats natively to Full HD 1080p without server restrictions.</p>
+    <p>Upscales video formats natively to Full HD 1080p with live progress tracking.</p>
 
-    <!-- Clickable upload container -->
     <div class="dropzone" onclick="document.getElementById('video-input').click()">
         <span id="box-text">📷 Click here to select your video file</span>
         <input type="file" id="video-input" accept="video/*,.3gp" />
     </div>
 
     <button id="process-btn" class="btn">Process to Full HD (1080p)</button>
+    
+    <!-- Added Progress Bar elements -->
+    <div class="progress-container" id="progress-container">
+        <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    
     <div id="status"></div>
 
-    <!-- Hidden visual nodes used for data crunching -->
     <video id="hidden-video" muted playsinline></video>
     <canvas id="upscale-canvas" width="1920" height="1080"></canvas>
 
@@ -73,6 +95,8 @@
         const fileInput = document.getElementById('video-input');
         const boxText = document.getElementById('box-text');
         const processBtn = document.getElementById('process-btn');
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
         const status = document.getElementById('status');
         const video = document.getElementById('hidden-video');
         const canvas = document.getElementById('upscale-canvas');
@@ -85,6 +109,8 @@
                 selectedFile = e.target.files[0];
                 boxText.innerText = "Selected: " + selectedFile.name;
                 processBtn.style.display = "block";
+                progressContainer.style.display = "none";
+                progressBar.style.width = "0%";
                 status.innerText = "File loaded. Ready to upscale.";
             }
         });
@@ -95,6 +121,7 @@
             status.innerText = "Initializing 1080p Canvas Engine...";
             processBtn.disabled = true;
             processBtn.style.opacity = "0.5";
+            progressContainer.style.display = "block";
 
             const fileURL = URL.createObjectURL(selectedFile);
             video.src = fileURL;
@@ -102,17 +129,17 @@
             video.onloadedmetadata = () => {
                 video.play();
                 
-                // Set up a stream capture from our 1080p Canvas layer
-                const stream = canvas.captureStream(30); // 30 FPS target
+                const stream = canvas.captureStream(30); 
                 const mediaRecorder = new MediaRecorder(stream, {
-                    mimeType: 'video/webm;codecs=vp9', // Universally supported offline target
-                    videoBitsPerSecond: 5000000 // Force high definition bitrate
+                    mimeType: 'video/webm;codecs=vp9', 
+                    videoBitsPerSecond: 5000000 
                 });
 
                 let chunks = [];
                 mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
 
                 mediaRecorder.onstop = () => {
+                    progressBar.style.width = "100%";
                     status.innerText = "Upscaling compile complete! Downloading output file...";
                     const blob = new Blob(chunks, { type: 'video/webm' });
                     const downloadUrl = URL.createObjectURL(blob);
@@ -127,17 +154,21 @@
                     status.innerText = "Done! Saved to downloads folder.";
                 };
 
-                // Start recording the canvas
                 mediaRecorder.start();
-                status.innerText = "Redrawing pixels to 1920x1080 resolution framework...";
 
-                // Frame rendering loop
                 function drawFrame() {
                     if (video.paused || video.ended) {
                         mediaRecorder.stop();
                         return;
                     }
-                    // Force the canvas context to smoothly redraw the frames to high-res boundaries
+                    
+                    // Calculate real-time percentage
+                    if (video.duration) {
+                        const percent = (video.currentTime / video.duration) * 100;
+                        progressBar.style.width = percent + "%";
+                        status.innerText = "Processing: " + Math.floor(percent) + "% complete";
+                    }
+
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                     requestAnimationFrame(drawFrame);
                 }
