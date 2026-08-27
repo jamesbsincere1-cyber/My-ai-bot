@@ -2,71 +2,148 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Local 3GP Video Converter</title>
-    <!-- 1. Load FFmpeg WebAssembly libraries -->
-    <script src="https://unpkg.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline 1080p Video Upscaler</title>
     <style>
-        body { font-family: sans-serif; max-width: 500px; margin: 40px auto; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-radius: 8px; }
-        .btn { background: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; display: block; width: 100%; margin-top: 15px; }
-        .progress { margin-top: 15px; font-weight: bold; color: #555; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #121214;
+            color: #e1e1e6;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+        h2 { color: #00adb5; margin-bottom: 5px; }
+        p { color: #8f8f9d; font-size: 14px; margin-bottom: 25px; }
+        .dropzone {
+            border: 2px dashed #00adb5;
+            padding: 30px;
+            border-radius: 8px;
+            background: #1a1a1e;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .dropzone:hover { background: #222229; }
+        input[type="file"] { display: none; }
+        .btn {
+            background: #00adb5;
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+            display: none;
+        }
+        .btn:hover { background: #008c95; }
+        #status {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #ffb703;
+            font-weight: 500;
+        }
+        video, canvas { display: none; }
     </style>
 </head>
 <body>
 
-    <h2>3GP to Full HD Converter</h2>
-    
-    <input type="file" id="video-input" accept=".3gp" />
-    
-    <label style="display:block; margin-top:15px;">Target Resolution:</label>
-    <select id="resolution">
-        <option value="1920x1080">1080p Full HD (1920x1080)</option>
-        <option value="1280x720">720p HD (1280x720)</option>
-    </select>
+    <h2>Offline Video Upscaler</h2>
+    <p>Upscales video formats natively to Full HD 1080p without server restrictions.</p>
 
-    <button class="btn" id="convert-btn">Convert & Scale Video</button>
-    <div class="progress" id="status-message">Ready.</div>
+    <!-- Clickable upload container -->
+    <div class="dropzone" onclick="document.getElementById('video-input').click()">
+        <span id="box-text">📷 Click here to select your video file</span>
+        <input type="file" id="video-input" accept="video/*,.3gp" />
+    </div>
+
+    <button id="process-btn" class="btn">Process to Full HD (1080p)</button>
+    <div id="status"></div>
+
+    <!-- Hidden visual nodes used for data crunching -->
+    <video id="hidden-video" muted playsinline></video>
+    <canvas id="upscale-canvas" width="1920" height="1080"></canvas>
 
     <script>
-        const { createFFmpeg, fetchFile } = FFmpeg;
-        const ffmpeg = createFFmpeg({ log: true });
+        const fileInput = document.getElementById('video-input');
+        const boxText = document.getElementById('box-text');
+        const processBtn = document.getElementById('process-btn');
+        const status = document.getElementById('status');
+        const video = document.getElementById('hidden-video');
+        const canvas = document.getElementById('upscale-canvas');
+        const ctx = canvas.getContext('2d');
 
-        document.getElementById('convert-btn').addEventListener('click', async () => {
-            const fileInput = document.getElementById('video-input');
-            const resValue = document.getElementById('resolution').value;
-            const status = document.getElementById('status-message');
+        let selectedFile = null;
 
-            if (fileInput.files.length === 0) {
-                status.innerText = "Please select a 3GP file first!";
-                return;
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                selectedFile = e.target.files[0];
+                boxText.innerText = "Selected: " + selectedFile.name;
+                processBtn.style.display = "block";
+                status.innerText = "File loaded. Ready to upscale.";
             }
+        });
 
-            status.innerText = "Loading FFmpeg engine (this takes a moment)...";
-            if (!ffmpeg.isLoaded()) { await ffmpeg.load(); }
+        processBtn.addEventListener('click', () => {
+            if (!selectedFile) return;
 
-            status.innerText = "Processing and upscaling video files...";
-            const file = fileInput.files[0];
-            
-            // Write the file to FFmpeg's virtual memory file system
-            ffmpeg.FS('writeFile', 'input.3gp', await fetchFile(file));
+            status.innerText = "Initializing 1080p Canvas Engine...";
+            processBtn.disabled = true;
+            processBtn.style.opacity = "0.5";
 
-            // Execute the FFmpeg command line: scale video and output to MP4
-            // -vf "scale=1920:1080" forces the resolution change
-            await ffmpeg.run('-i', 'input.3gp', '-vf', `scale=${resValue.replace('x', ':')}`, 'output.mp4');
+            const fileURL = URL.createObjectURL(selectedFile);
+            video.src = fileURL;
 
-            status.innerText = "Conversion complete! Downloading...";
-            
-            // Read back the finalized MP4 file from the virtual file system
-            const data = ffmpeg.FS('readFile', 'output.mp4');
+            video.onloadedmetadata = () => {
+                video.play();
+                
+                // Set up a stream capture from our 1080p Canvas layer
+                const stream = canvas.captureStream(30); // 30 FPS target
+                const mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'video/webm;codecs=vp9', // Universally supported offline target
+                    videoBitsPerSecond: 5000000 // Force high definition bitrate
+                });
 
-            // Trigger a browser download anchor link
-            const videoBlob = new Blob([data.buffer], { type: 'video/mp4' });
-            const url = URL.createObjectURL(videoBlob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'upscaled_video.mp4';
-            a.click();
-            
-            status.innerText = "Done!";
+                let chunks = [];
+                mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+
+                mediaRecorder.onstop = () => {
+                    status.innerText = "Upscaling compile complete! Downloading output file...";
+                    const blob = new Blob(chunks, { type: 'video/webm' });
+                    const downloadUrl = URL.createObjectURL(blob);
+                    
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = "upscaled_1080p_" + selectedFile.name.split('.')[0] + ".webm";
+                    a.click();
+
+                    processBtn.disabled = false;
+                    processBtn.style.opacity = "1";
+                    status.innerText = "Done! Saved to downloads folder.";
+                };
+
+                // Start recording the canvas
+                mediaRecorder.start();
+                status.innerText = "Redrawing pixels to 1920x1080 resolution framework...";
+
+                // Frame rendering loop
+                function drawFrame() {
+                    if (video.paused || video.ended) {
+                        mediaRecorder.stop();
+                        return;
+                    }
+                    // Force the canvas context to smoothly redraw the frames to high-res boundaries
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    requestAnimationFrame(drawFrame);
+                }
+                
+                drawFrame();
+            };
         });
     </script>
 </body>
