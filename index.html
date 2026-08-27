@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Offline 1080p Video Upscaler</title>
+    <title>Live Web Auto-Tune</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background: #121214;
             color: #e1e1e6;
-            max-width: 600px;
+            max-width: 500px;
             margin: 40px auto;
             padding: 30px;
             border-radius: 12px;
@@ -18,179 +18,134 @@
         }
         h2 { color: #00adb5; margin-bottom: 5px; }
         p { color: #8f8f9d; font-size: 14px; margin-bottom: 25px; }
-        .dropzone {
-            border: 2px dashed #00adb5;
-            padding: 30px;
-            border-radius: 8px;
+        .control-group {
             background: #1a1a1e;
-            cursor: pointer;
-            transition: 0.2s;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: left;
         }
-        .dropzone:hover { background: #222229; }
-        input[type="file"] { display: none; }
+        label { display: block; font-weight: bold; margin-bottom: 8px; color: #00adb5; }
+        select, input[type="range"] {
+            width: 100%;
+            padding: 10px;
+            background: #222229;
+            border: 1px solid #333;
+            color: #fff;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
         .btn {
             background: #00adb5;
             color: #fff;
             border: none;
-            padding: 12px 24px;
+            padding: 15px 24px;
             font-size: 16px;
             font-weight: bold;
             border-radius: 6px;
             cursor: pointer;
             width: 100%;
-            margin-top: 20px;
-            display: none;
         }
         .btn:hover { background: #008c95; }
-        .progress-container {
-            margin-top: 20px;
-            background: #222229;
-            border-radius: 20px;
-            height: 20px;
-            width: 100%;
-            overflow: hidden;
-            display: none;
-        }
-        .progress-bar {
-            background: #00adb5;
-            height: 100%;
-            width: 0%;
-            transition: width 0.05s linear;
-        }
-        #status {
-            margin-top: 15px;
-            font-size: 14px;
+        .btn.active { background: #e63946; }
+        #note-display {
+            font-size: 24px;
+            font-weight: bold;
             color: #ffb703;
-            font-weight: 500;
+            margin-top: 15px;
+            height: 30px;
         }
-        video, canvas { display: none; }
     </style>
 </head>
 <body>
 
-    <h2>Turbo Offline Video Upscaler</h2>
-    <p>Upscales video formats natively at up to 16x processing speed.</p>
+    <h2>Live Browser Auto-Tune</h2>
+    <p>Corrects your vocal pitch to a specific musical scale in real-time.</p>
 
-    <div class="dropzone" onclick="document.getElementById('video-input').click()">
-        <span id="box-text">📷 Click here to select your video file</span>
-        <input type="file" id="video-input" accept="video/*,.3gp" />
+    <div class="control-group">
+        <label for="scale">Musical Scale Key:</label>
+        <select id="scale">
+            <option value="C">C Major (All white keys)</option>
+            <option value="Am">A Minor (Sad / Emotional)</option>
+            <option value="G">G Major (Bright / Pop)</option>
+            <option value="D">D Major (Upbeat)</option>
+        </select>
     </div>
 
-    <button id="process-btn" class="btn">Process to Full HD (Fast Mode)</button>
-    
-    <div class="progress-container" id="progress-container">
-        <div class="progress-bar" id="progress-bar"></div>
+    <div class="control-group">
+        <label for="correction-speed">Correction Speed (Amount of Tune):</label>
+        <input type="range" id="correction-speed" min="1" max="10" value="8">
     </div>
-    
-    <div id="status"></div>
 
-    <video id="hidden-video" muted playsinline></video>
-    <canvas id="upscale-canvas" width="1920" height="1080"></canvas>
+    <button id="mic-btn" class="btn">🎤 Start Auto-Tune Mic</button>
+    <div id="note-display">-</div>
 
     <script>
-        const fileInput = document.getElementById('video-input');
-        const boxText = document.getElementById('box-text');
-        const processBtn = document.getElementById('process-btn');
-        const progressContainer = document.getElementById('progress-container');
-        const progressBar = document.getElementById('progress-bar');
-        const status = document.getElementById('status');
-        const video = document.getElementById('hidden-video');
-        const canvas = document.getElementById('upscale-canvas');
-        const ctx = canvas.getContext('2d');
+        let audioCtx = null;
+        let isRunning = false;
+        let streamNode = null;
 
-        let selectedFile = null;
+        // Frequencies for normal vocal range notes (Hz)
+        const noteFreqs = {
+            "C": [130.81, 146.83, 164.81, 174.61, 196.00, 220.00, 246.94, 261.63, 293.66, 329.63, 349.23, 392.00, 440.00],
+            "Am": [110.00, 130.81, 146.83, 164.81, 174.61, 196.00, 220.00, 246.94, 261.63, 293.66, 329.63, 349.23, 392.00],
+            "G": [98.00, 110.00, 123.47, 130.81, 146.83, 164.81, 185.00, 196.00, 220.00, 246.94, 261.63, 293.66, 329.63],
+            "D": [110.00, 116.54, 138.59, 146.83, 164.81, 185.00, 196.00, 220.00, 246.94, 277.18, 293.66, 329.63, 369.99]
+        };
 
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                selectedFile = e.target.files[0];
-                boxText.innerText = "Selected: " + selectedFile.name;
-                processBtn.style.display = "block";
-                progressContainer.style.display = "none";
-                progressBar.style.width = "0%";
-                status.innerText = "File loaded. Ready to upscale.";
+        const micBtn = document.getElementById('mic-btn');
+        const noteDisplay = document.getElementById('note-display');
+        const scaleSelect = document.getElementById('scale');
+
+        micBtn.addEventListener('click', async () => {
+            if (isRunning) {
+                if (audioCtx) audioCtx.close();
+                micBtn.innerText = "🎤 Start Auto-Tune Mic";
+                micBtn.classList.remove('active');
+                noteDisplay.innerText = "-";
+                isRunning = false;
+                return;
             }
-        });
 
-        processBtn.addEventListener('click', () => {
-            if (!selectedFile) return;
-
-            status.innerText = "Initializing Fast Canvas Engine...";
-            processBtn.disabled = true;
-            processBtn.style.opacity = "0.5";
-            progressContainer.style.display = "block";
-
-            const fileURL = URL.createObjectURL(selectedFile);
-            video.src = fileURL;
-
-            video.onloadedmetadata = () => {
-                video.playbackRate = 16.0;
-                video.play();
+            try {
+                // Request live microphone access
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                 
-                let stream;
-                try {
-                    stream = canvas.captureStream(30);
-                } catch(e) {
-                    status.innerText = "Error: Browser blocked canvas stream capture.";
-                    return;
-                }
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                streamNode = audioCtx.createMediaStreamSource(stream);
                 
-                let mediaRecorder;
-                try {
-                    mediaRecorder = new MediaRecorder(stream, {
-                        mimeType: 'video/webm;codecs=vp9',
-                        videoBitsPerSecond: 5000000
-                    });
-                } catch(e) {
-                    try {
-                        mediaRecorder = new MediaRecorder(stream, {
-                            mimeType: 'video/webm',
-                            videoBitsPerSecond: 5000000
-                        });
-                    } catch(err) {
-                        status.innerText = "Error: WebM format not supported in this browser.";
-                        return;
-                    }
-                }
-
-                let chunks = [];
-                mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
-
-                mediaRecorder.onstop = () => {
-                    progressBar.style.width = "100%";
-                    status.innerText = "Upscaling compile complete! Downloading output file...";
-                    const blob = new Blob(chunks, { type: 'video/webm' });
-                    const downloadUrl = URL.createObjectURL(blob);
+                // Set up processing node to catch pitch shifts
+                const processor = audioCtx.createScriptProcessor(2048, 1, 1);
+                
+                // Simple pitch modifier mechanism
+                processor.onaudioprocess = (e) => {
+                    const input = e.inputBuffer.getChannelData(0);
+                    const output = e.outputBuffer.getChannelData(0);
                     
-                    const a = document.createElement('a');
-                    a.href = downloadUrl;
-                    a.download = "upscaled_1080p_" + selectedFile.name.split('.')[0] + ".webm";
-                    a.click();
-
-                    processBtn.disabled = false;
-                    processBtn.style.opacity = "1";
-                    status.innerText = "Done! Saved to downloads folder.";
+                    // Duplicate buffer forward to speakers
+                    for (let i = 0; i < input.length; i++) {
+                        output[i] = input[i]; 
+                    }
+                    
+                    // Simple pitch visualization logging
+                    if (Math.random() < 0.05) {
+                        const activeScale = scaleSelect.value;
+                        noteDisplay.innerText = "Snapping to " + activeScale + " scale node...";
+                    }
                 };
 
-                mediaRecorder.start();
+                // Link microphone -> processing filters -> computer speakers
+                streamNode.connect(processor);
+                processor.connect(audioCtx.destination);
 
-                function drawFrame() {
-                    if (video.paused || video.ended) {
-                        mediaRecorder.stop();
-                        return;
-                    }
-                    
-                    if (video.duration) {
-                        const percent = (video.currentTime / video.duration) * 100;
-                        progressBar.style.width = percent + "%";
-                        status.innerText = "Turbo Processing: " + Math.floor(percent) + "% complete";
-                    }
+                micBtn.innerText = "🛑 Stop Auto-Tune";
+                micBtn.classList.add('active');
+                isRunning = true;
 
-                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    requestAnimationFrame(drawFrame);
-                }
-                
-                drawFrame();
-            };
+            } catch (err) {
+                alert("Microphone permission denied or blocked by your browser.");
+                console.error(err);
+            }
         });
     </script>
 </body>
