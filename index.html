@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Global Over-The-Web Video & Text Matcher</title>
+    <title>Global Over-The-Web Video Matcher</title>
     <!-- PeerJS manages completely free WebRTC matching pipelines serverlessly -->
     <script src="https://unpkg.com"></script>
     <style>
@@ -80,39 +80,7 @@
         video { width: 100%; height: 100%; object-fit: cover; }
         #localVideo { transform: scaleX(-1); } /* Mirror local cam view */
         
-        .chat-box {
-            width: 100%;
-            max-width: 600px;
-            background: #111827;
-            border: 2px solid #374151;
-            border-radius: 12px;
-            margin-top: 25px;
-            padding: 15px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-        }
-        .chat-log {
-            height: 150px;
-            overflow-y: auto;
-            background: #0a0e17;
-            border-radius: 8px;
-            padding: 10px;
-            text-align: left;
-            margin-bottom: 10px;
-            border: 1px solid #2d3748;
-        }
-        .chat-message { margin-bottom: 8px; font-size: 0.95rem; }
-        .chat-input-area { display: flex; gap: 10px; }
-        input[type="text"] {
-            flex: 1;
-            padding: 10px;
-            border-radius: 6px;
-            border: 1px solid #374151;
-            background: #1e293b;
-            color: #fff;
-            font-size: 1rem;
-        }
-        
-        .controls { margin-top: 10px; display: flex; gap: 10px; }
+        .controls { margin-top: 15px; display: flex; gap: 10px; }
         button {
             padding: 12px 28px;
             font-size: 16px;
@@ -126,7 +94,6 @@
         button:active { transform: scale(0.98); }
         #startButton { background-color: #2563eb; }
         #matchButton { background-color: #10b981; }
-        #sendButton { background-color: #3b82f6; padding: 10px 20px; font-size: 1rem; }
         button:disabled {
             background-color: #374151 !important;
             color: #4b5563 !important;
@@ -163,25 +130,11 @@
         <button id="startButton">1. Start Camera</button>
     </div>
 
-    <div class="chat-box">
-        <div id="chatLog" class="chat-log">
-            <div class="chat-message" style="color: #9ca3af;">Messages will appear here...</div>
-        </div>
-        <div class="chat-input-area">
-            <input type="text" id="chatInput" placeholder="Type a message..." disabled>
-            <button id="sendButton" disabled>Send</button>
-        </div>
-    </div>
-
     <script>
         const startButton = document.getElementById('startButton');
         const matchButton = document.getElementById('matchButton');
         const roomCodeInput = document.getElementById('roomCodeInput');
         const statusBox = document.getElementById('statusBox');
-        
-        const chatLog = document.getElementById('chatLog');
-        const chatInput = document.getElementById('chatInput');
-        const sendButton = document.getElementById('sendButton');
         
         const localVideo = document.getElementById('localVideo');
         const remoteVideo = document.getElementById('remoteVideo');
@@ -189,14 +142,12 @@
         let localStream = null;
         let myPeer = null;
         let currentCall = null;
-        let currentConn = null;
 
-        // 🌟 CRITICAL TURN/STUN CONFIGURATION: Forces traffic through firewalls via open web relays
+        // Global TURN firewall bypass configurations
         const customIceConfig = {
             iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-                // High-performance public TURN relay network to connect over cellular data/different routers
+                { urls: 'stun:://google.com' },
+                { urls: 'stun:://google.com' },
                 {
                     urls: 'turn:openrelay.metered.ca:80',
                     username: 'openrelayproject',
@@ -210,48 +161,54 @@
             ]
         };
 
-        function appendMessage(sender, text, color) {
-            const msgDiv = document.createElement('div');
-            msgDiv.className = 'chat-message';
-            msgDiv.innerHTML = `<strong style="color: ${color}">${sender}:</strong> ${text}`;
-            chatLog.appendChild(msgDiv);
-            chatLog.scrollTop = chatLog.scrollHeight;
-        }
-
-        // 1. Fire up the local hardware streams
+        // 1. Hardened Hardware Stream Initialization Engine
         startButton.onclick = async () => {
+            statusBox.innerText = "Status: Initializing hardware components...";
+            
+            // Tier 1 Priority: Attempt Full High-Performance Mobile Video Capture
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" }, 
+                    audio: true 
+                });
+                localVideo.srcObject = localStream;
+                activateLobbyUI();
+                return;
+            } catch (videoError) {
+                console.warn("High-res initialization failed, trying standard mobile scale...", videoError);
+            }
+
+            // Tier 2 Fallback: Lower standard mobile dimensions to resolve hardware limits
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 localVideo.srcObject = localStream;
-                statusBox.innerText = "Status: Camera Ready.";
+                activateLobbyUI();
+                return;
+            } catch (fallbackError) {
+                console.warn("Standard stream failed, trying audio fallback loop...", fallbackError);
+            }
+
+            // Tier 3 Fallback: Audio-Only loop if the camera lens is explicitly locked by another application
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                statusBox.innerText = "Status: Camera locked by background app. Connected with mic only.";
                 startButton.disabled = true;
                 matchButton.disabled = false;
                 roomCodeInput.disabled = false;
-            } catch (e) {
-                alert(`Camera Error: ${e.message}`);
+            } catch (finalError) {
+                statusBox.innerText = "Status: Permission Blocked. Check site settings slider.";
+                alert("🔒 Browser Lock: Tap the sliders/lock icon next to the URL address bar and click 'Allow' for camera and microphone.");
             }
         };
 
-        sendButton.onclick = () => {
-            const message = chatInput.value.trim();
-            if (!message || !currentConn) return;
-            currentConn.send(message); 
-            appendMessage("You", message, "#38bdf8");
-            chatInput.value = "";
-        };
-
-        chatInput.addEventListener("keypress", (e) => {
-            if (e.key === "Enter") sendButton.click();
-        });
-
-        function wireChannels(conn) {
-            currentConn = conn;
-            chatInput.disabled = false;
-            sendButton.disabled = false;
-            conn.on('data', data => appendMessage("Stranger", data, "#10b981"));
+        function activateLobbyUI() {
+            statusBox.innerText = "Status: Camera Connected. Enter password room.";
+            startButton.disabled = true;
+            matchButton.disabled = false;
+            roomCodeInput.disabled = false;
         }
 
-        // 2. Automated Password Matching Tunnel Logic
+        // 2. Matching Passcode Relay Loop
         matchButton.onclick = () => {
             const inputCode = roomCodeInput.value.trim().toLowerCase();
             if (!inputCode) {
@@ -261,15 +218,39 @@
 
             matchButton.disabled = true;
             roomCodeInput.disabled = true;
-            statusBox.innerText = "Status: Opening web tunnel...";
+            statusBox.innerText = "Status: Opening secure web tunnel...";
 
-            // Role identifiers
             const primaryId = "lobby-" + inputCode + "-slotA";
             const secondaryId = "lobby-" + inputCode + "-slotB";
 
-            // Attempt to boot up as Slot A
             myPeer = new Peer(primaryId, { config: customIceConfig });
 
             myPeer.on('open', (id) => {
                 statusBox.innerText = "Status: Room hosted. Waiting for brother...";
                 
+                myPeer.on('call', (incomingCall) => {
+                    currentCall = incomingCall;
+                    incomingCall.answer(localStream);
+                    incomingCall.on('stream', stream => {
+                        remoteVideo.srcObject = stream;
+                        statusBox.innerText = "Status: Connected over the web!";
+                    });
+                });
+            });
+
+            myPeer.on('error', (err) => {
+                if (err.type === 'unavailable-id') {
+                    myPeer = new Peer(secondaryId, { config: customIceConfig });
+                    
+                    myPeer.on('open', () => {
+                        statusBox.innerText = "Status: Joining room. Linking streams...";
+                        const call = myPeer.call(primaryId, localStream);
+                        currentCall = call;
+                        if (call) {
+                            call.on('stream', stream => {
+                                remoteVideo.srcObject = stream;
+                                statusBox.innerText = "Status: Connected over the web!";
+                            });
+                        }
+                    });
+                } else {
