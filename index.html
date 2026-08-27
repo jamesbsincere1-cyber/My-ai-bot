@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Offline 1080p Video Upscaler</title>
+    <title>Fast Offline 1080p Video Upscaler</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -43,7 +43,6 @@
         }
         .btn:hover { background: #008c95; }
         
-        /* Progress Container Styles */
         .progress-container {
             margin-top: 20px;
             background: #222229;
@@ -57,7 +56,7 @@
             background: #00adb5;
             height: 100%;
             width: 0%;
-            transition: width 0.1s linear;
+            transition: width 0.05s linear;
         }
         
         #status {
@@ -71,17 +70,16 @@
 </head>
 <body>
 
-    <h2>Offline Video Upscaler</h2>
-    <p>Upscales video formats natively to Full HD 1080p with live progress tracking.</p>
+    <h2>Turbo Offline Video Upscaler</h2>
+    <p>Upscales video formats natively at up to 16x processing speed.</p>
 
     <div class="dropzone" onclick="document.getElementById('video-input').click()">
         <span id="box-text">📷 Click here to select your video file</span>
         <input type="file" id="video-input" accept="video/*,.3gp" />
     </div>
 
-    <button id="process-btn" class="btn">Process to Full HD (1080p)</button>
+    <button id="process-btn" class="btn">Process to Full HD (Fast Mode)</button>
     
-    <!-- Added Progress Bar elements -->
     <div class="progress-container" id="progress-container">
         <div class="progress-bar" id="progress-bar"></div>
     </div>
@@ -118,7 +116,7 @@
         processBtn.addEventListener('click', () => {
             if (!selectedFile) return;
 
-            status.innerText = "Initializing 1080p Canvas Engine...";
+            status.innerText = "Initializing Fast Canvas Engine...";
             processBtn.disabled = true;
             processBtn.style.opacity = "0.5";
             progressContainer.style.display = "block";
@@ -127,6 +125,8 @@
             video.src = fileURL;
 
             video.onloadedmetadata = () => {
+                // Boost playback speed to max browser limit (16x speed)
+                video.playbackRate = 16.0;
                 video.play();
                 
                 const stream = canvas.captureStream(30); 
@@ -162,11 +162,10 @@
                         return;
                     }
                     
-                    // Calculate real-time percentage
                     if (video.duration) {
                         const percent = (video.currentTime / video.duration) * 100;
                         progressBar.style.width = percent + "%";
-                        status.innerText = "Processing: " + Math.floor(percent) + "% complete";
+                        status.innerText = "Turbo Processing: " + Math.floor(percent) + "% complete";
                     }
 
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
