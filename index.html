@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Serverless Random Video & Text Matcher</title>
-    <!-- PeerJS manages completely free, auto-scaling WebRTC matchmaking tunnels -->
+    <title>Serverless Random Matcher</title>
+    <!-- PeerJS core library for serverless connection pipelines -->
     <script src="https://unpkg.com"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -30,7 +30,7 @@
         .status-banner {
             margin: 15px auto;
             padding: 12px 24px;
-            width: 320px;
+            width: 340px;
             background: #1e293b;
             border: 1px solid #334155;
             border-radius: 30px;
@@ -58,9 +58,8 @@
         }
         h3 { color: #9ca3af; margin-bottom: 8px; font-weight: 500; text-align: left; padding-left: 5px;}
         video { width: 100%; height: 100%; object-fit: cover; }
-        #localVideo { transform: scaleX(-1); } /* Mirror local cam naturally */
+        #localVideo { transform: scaleX(-1); } /* Mirror local cam view */
         
-        /* 💬 Text Chat Styles */
         .chat-box {
             width: 100%;
             max-width: 600px;
@@ -81,14 +80,8 @@
             margin-bottom: 10px;
             border: 1px solid #2d3748;
         }
-        .chat-message {
-            margin-bottom: 8px;
-            font-size: 0.95rem;
-        }
-        .chat-input-area {
-            display: flex;
-            gap: 10px;
-        }
+        .chat-message { margin-bottom: 8px; font-size: 0.95rem; }
+        .chat-input-area { display: flex; gap: 10px; }
         input[type="text"] {
             flex: 1;
             padding: 10px;
@@ -145,7 +138,6 @@
         <button id="nextButton" disabled>Skip / Next</button>
     </div>
 
-    <!-- 💬 Text Message Log Section -->
     <div class="chat-box">
         <div id="chatLog" class="chat-log">
             <div class="chat-message" style="color: #9ca3af;">Messages will appear here...</div>
@@ -172,11 +164,11 @@
         let localStream = null;
         let myPeer = null;
         let currentCall = null;
-        let currentConn = null; // Keeps track of text data connection
+        let currentConn = null;
 
-        const roomKey = "cyber-chat-room-v2";
+        // Shared lookup key to identify your pairing pool
+        const appLobbyPrefix = "james-cyber-matchmaking-v3-";
 
-        // Append text to chat log interface
         function appendMessage(sender, text, color) {
             const msgDiv = document.createElement('div');
             msgDiv.className = 'chat-message';
@@ -185,7 +177,7 @@
             chatLog.scrollTop = chatLog.scrollHeight;
         }
 
-        // 1. Unblock Android camera hardware
+        // 1. Unblock phone camera hardware
         startButton.onclick = async () => {
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -198,77 +190,78 @@
             }
         };
 
-        // Send chat messages serverlessly
         sendButton.onclick = () => {
             const message = chatInput.value.trim();
             if (!message || !currentConn) return;
-            
-            currentConn.send(message); // Sends data straight over the P2P connection channel
+            currentConn.send(message); // Pass text over WebRTC data channels
             appendMessage("You", message, "#38bdf8");
             chatInput.value = "";
         };
 
-        // Allow pressing Enter key to send chat
         chatInput.addEventListener("keypress", (e) => {
             if (e.key === "Enter") sendButton.click();
         });
 
-        // Setup text messaging tracking actions
-        function setupDataConnection(conn) {
+        function wireChannels(conn) {
             currentConn = conn;
             chatInput.disabled = false;
             sendButton.disabled = false;
-            
-            conn.on('data', (data) => {
-                appendMessage("Stranger", data, "#10b981");
-            });
-
+            conn.on('data', data => appendMessage("Stranger", data, "#10b981"));
             conn.on('close', () => {
-                appendMessage("System", "Partner disconnected.", "#ef4444");
-                chatInput.disabled = true;
-                sendButton.disabled = true;
+                appendMessage("System", "User disconnected.", "#ef4444");
+                nextButton.click();
             });
         }
 
-        // 2. Automate matchmaking pool using PeerJS dynamic rooms
+        // 2. Room Discovery Core Engine
         matchButton.onclick = () => {
             matchButton.disabled = true;
             nextButton.disabled = false;
-            statusBox.innerText = "Status: Connecting to matchmaker...";
+            statusBox.innerText = "Status: Searching for someone...";
 
-            myPeer = new Peer(roomKey + "-peer-A");
+            // Assigns a completely clean, non-conflicting peer role slot randomly
+            const isFirstSlot = Math.random() > 0.5;
+            const primaryId = appLobbyPrefix + "peer-A";
+            const secondaryId = appLobbyPrefix + "peer-B";
+
+            const myTargetRole = isFirstSlot ? primaryId : secondaryId;
+            const targetPartnerRole = isFirstSlot ? secondaryId : primaryId;
+
+            // Initialize connection node using random token
+            myPeer = new Peer(myTargetRole);
 
             myPeer.on('open', (id) => {
-                statusBox.innerText = "Status: Lobby open. Waiting for partner...";
+                statusBox.innerText = "Status: Lobby open. Connecting pipeline...";
                 
-                // Track video call data streams
+                // Route for matching when you are already inside waiting
                 myPeer.on('call', (incomingCall) => {
                     currentCall = incomingCall;
                     incomingCall.answer(localStream);
-                    incomingCall.on('stream', (remoteStream) => {
-                        remoteVideo.srcObject = remoteStream;
-                        statusBox.innerText = "Status: Connected to stranger!";
+                    incomingCall.on('stream', stream => {
+                        remoteVideo.srcObject = stream;
+                        statusBox.innerText = "Status: Connected!";
                     });
                 });
 
-                // Track serverless text communication links
                 myPeer.on('connection', (conn) => {
-                    setupDataConnection(conn);
+                    wireChannels(conn);
                 });
+
+                // Instantly query the pairing target role position in the cloud matrix
+                setTimeout(() => {
+                    statusBox.innerText = "Status: Linking network stream...";
+                    const conn = myPeer.connect(targetPartnerRole);
+                    wireChannels(conn);
+
+                    const call = myPeer.call(targetPartnerRole, localStream);
+                    currentCall = call;
+                    if(call) {
+                        call.on('stream', stream => {
+                            remoteVideo.srcObject = stream;
+                            statusBox.innerText = "Status: Connected!";
+                        });
+                    }
+                }, 1500);
             });
 
-            myPeer.on('error', (err) => {
-                if (err.type === 'unavailable-id') {
-                    myPeer = new Peer(); 
-                    myPeer.on('open', () => {
-                        statusBox.clientX = "Status: Match found! Launching stream...";
-                        
-                        // Bridge text channel data link
-                        const conn = myPeer.connect(roomKey + "-peer-A");
-                        setupDataConnection(conn);
-
-                        // Bridge video stream channel link
-                        const call = myPeer.call(roomKey + "-peer-A", localStream);
-                        currentCall = call;
-                        
-                        call.on('stream', (remoteStream) => {
+            // Auto-recovery mechanism if role slots clash
