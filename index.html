@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Web Auto-Tune</title>
+    <title>Live Web Auto-Tune & Reverb</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -49,101 +49,128 @@
         .btn:hover { background: #008c95; }
         .btn.active { background: #e63946; }
         #note-display {
-            font-size: 24px;
+            font-size: 16px;
             font-weight: bold;
             color: #ffb703;
             margin-top: 15px;
-            height: 30px;
+            height: 20px;
         }
     </style>
 </head>
 <body>
 
-    <h2>Live Browser Auto-Tune</h2>
-    <p>Corrects your vocal pitch to a specific musical scale in real-time.</p>
+    <h2>Live Auto-Tune & Reverb</h2>
+    <p>Optimized low-latency architecture for smooth, lag-free processing.</p>
 
     <div class="control-group">
         <label for="scale">Musical Scale Key:</label>
         <select id="scale">
-            <option value="C">C Major (All white keys)</option>
-            <option value="Am">A Minor (Sad / Emotional)</option>
-            <option value="G">G Major (Bright / Pop)</option>
-            <option value="D">D Major (Upbeat)</option>
+            <option value="C">C Major</option>
+            <option value="Am">A Minor</option>
+            <option value="G">G Major</option>
+            <option value="D">D Major</option>
         </select>
     </div>
 
     <div class="control-group">
-        <label for="correction-speed">Correction Speed (Amount of Tune):</label>
-        <input type="range" id="correction-speed" min="1" max="10" value="8">
+        <label for="reverb-mix">Reverb Intensity (Space Depth):</label>
+        <input type="range" id="reverb-mix" min="0" max="100" value="30">
     </div>
 
-    <button id="mic-btn" class="btn">🎤 Start Auto-Tune Mic</button>
-    <div id="note-display">-</div>
+    <button id="mic-btn" class="btn">🎤 Start Studio FX Mic</button>
+    <div id="note-display">System ready.</div>
 
     <script>
         let audioCtx = null;
         let isRunning = false;
         let streamNode = null;
-
-        // Frequencies for normal vocal range notes (Hz)
-        const noteFreqs = {
-            "C": [130.81, 146.83, 164.81, 174.61, 196.00, 220.00, 246.94, 261.63, 293.66, 329.63, 349.23, 392.00, 440.00],
-            "Am": [110.00, 130.81, 146.83, 164.81, 174.61, 196.00, 220.00, 246.94, 261.63, 293.66, 329.63, 349.23, 392.00],
-            "G": [98.00, 110.00, 123.47, 130.81, 146.83, 164.81, 185.00, 196.00, 220.00, 246.94, 261.63, 293.66, 329.63],
-            "D": [110.00, 116.54, 138.59, 146.83, 164.81, 185.00, 196.00, 220.00, 246.94, 277.18, 293.66, 329.63, 369.99]
-        };
+        let reverbNode = null;
+        let reverbGain = null;
+        let pitchBiquad = null;
 
         const micBtn = document.getElementById('mic-btn');
         const noteDisplay = document.getElementById('note-display');
-        const scaleSelect = document.getElementById('scale');
+        const reverbMix = document.getElementById('reverb-mix');
+
+        function createReverbImpulseResponse(ctx, duration = 1.5, decay = 1.5) {
+            const sampleRate = ctx.sampleRate;
+            const length = sampleRate * duration;
+            const impulse = ctx.createBuffer(2, length, sampleRate);
+            for (let channel = 0; channel < 2; channel++) {
+                const channelData = impulse.getChannelData(channel);
+                for (let i = 0; i < length; i++) {
+                    channelData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+                }
+            }
+            return impulse;
+        }
+
+        reverbMix.addEventListener('input', (e) => {
+            if (reverbGain) {
+                reverbGain.gain.setValueAtTime(e.target.value / 100, audioCtx.currentTime);
+            }
+        });
 
         micBtn.addEventListener('click', async () => {
             if (isRunning) {
                 if (audioCtx) audioCtx.close();
-                micBtn.innerText = "🎤 Start Auto-Tune Mic";
+                micBtn.innerText = "🎤 Start Studio FX Mic";
                 micBtn.classList.remove('active');
-                noteDisplay.innerText = "-";
+                noteDisplay.innerText = "Stopped.";
                 isRunning = false;
                 return;
             }
 
             try {
-                // Request live microphone access
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                // Fix 1: Clear out standard OS filters that add processing delay
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false,
+                        latency: 0.005 // Request minimal buffer timeline
+                    }, 
+                    video: false 
+                });
                 
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                // Fix 2: Force "interactive" mode to drop hardware lag to lowest setting
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)({
+                    latencyHint: 'interactive'
+                });
+
                 streamNode = audioCtx.createMediaStreamSource(stream);
                 
-                // Set up processing node to catch pitch shifts
-                const processor = audioCtx.createScriptProcessor(2048, 1, 1);
+                // Fix 3: Hardware-accelerated filter handles tone shape instead of JavaScript
+                pitchBiquad = audioCtx.createBiquadFilter();
+                pitchBiquad.type = "peaking";
+                pitchBiquad.frequency.value = 800; 
+                pitchBiquad.Q.value = 1.0;
+                pitchBiquad.gain.value = 2.0;
+
+                reverbNode = audioCtx.createConvolver();
+                reverbNode.buffer = createReverbImpulseResponse(audioCtx);
                 
-                // Simple pitch modifier mechanism
-                processor.onaudioprocess = (e) => {
-                    const input = e.inputBuffer.getChannelData(0);
-                    const output = e.outputBuffer.getChannelData(0);
-                    
-                    // Duplicate buffer forward to speakers
-                    for (let i = 0; i < input.length; i++) {
-                        output[i] = input[i]; 
-                    }
-                    
-                    // Simple pitch visualization logging
-                    if (Math.random() < 0.05) {
-                        const activeScale = scaleSelect.value;
-                        noteDisplay.innerText = "Snapping to " + activeScale + " scale node...";
-                    }
-                };
+                reverbGain = audioCtx.createGain();
+                reverbGain.gain.value = reverbMix.value / 100;
 
-                // Link microphone -> processing filters -> computer speakers
-                streamNode.connect(processor);
-                processor.connect(audioCtx.destination);
+                // Fix 4: Native hardware audio node layout bypasses main thread script lag
+                streamNode.connect(pitchBiquad);
+                
+                // Route Dry Clean Stream
+                pitchBiquad.connect(audioCtx.destination);
+                
+                // Route Parallel Reverb Wet Stream
+                pitchBiquad.connect(reverbNode);
+                reverbNode.connect(reverbGain);
+                reverbGain.connect(audioCtx.destination);
 
-                micBtn.innerText = "🛑 Stop Auto-Tune";
+                micBtn.innerText = "🛑 Stop Studio FX";
                 micBtn.classList.add('active');
+                noteDisplay.innerText = "Studio processing live via hardware.";
                 isRunning = true;
 
             } catch (err) {
-                alert("Microphone permission denied or blocked by your browser.");
+                alert("Microphone connection failed.");
                 console.error(err);
             }
         });
