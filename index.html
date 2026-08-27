@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Serverless Random Video Matcher</title>
+    <title>Serverless Random Video & Text Matcher</title>
     <!-- PeerJS manages completely free, auto-scaling WebRTC matchmaking tunnels -->
     <script src="https://unpkg.com"></script>
     <style>
@@ -59,6 +59,46 @@
         h3 { color: #9ca3af; margin-bottom: 8px; font-weight: 500; text-align: left; padding-left: 5px;}
         video { width: 100%; height: 100%; object-fit: cover; }
         #localVideo { transform: scaleX(-1); } /* Mirror local cam naturally */
+        
+        /* 💬 Text Chat Styles */
+        .chat-box {
+            width: 100%;
+            max-width: 600px;
+            background: #111827;
+            border: 2px solid #374151;
+            border-radius: 12px;
+            margin-top: 25px;
+            padding: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        .chat-log {
+            height: 150px;
+            overflow-y: auto;
+            background: #0a0e17;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: left;
+            margin-bottom: 10px;
+            border: 1px solid #2d3748;
+        }
+        .chat-message {
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+        .chat-input-area {
+            display: flex;
+            gap: 10px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #374151;
+            background: #1e293b;
+            color: #fff;
+            font-size: 1rem;
+        }
+        
         .controls { margin-top: 25px; display: flex; gap: 10px; }
         button {
             padding: 12px 28px;
@@ -74,6 +114,7 @@
         #startButton { background-color: #2563eb; }
         #matchButton { background-color: #10b981; }
         #nextButton { background-color: #ef4444; }
+        #sendButton { background-color: #3b82f6; padding: 10px 20px; font-size: 1rem; }
         button:disabled {
             background-color: #374151 !important;
             color: #4b5563 !important;
@@ -84,7 +125,7 @@
 </head>
 <body>
 
-    <h1>Random Video Matcher</h1>
+    <h1>Serverless Video Matcher</h1>
     <div id="statusBox" class="status-banner">Status: Camera Offline</div>
 
     <div class="video-container">
@@ -104,11 +145,26 @@
         <button id="nextButton" disabled>Skip / Next</button>
     </div>
 
+    <!-- 💬 Text Message Log Section -->
+    <div class="chat-box">
+        <div id="chatLog" class="chat-log">
+            <div class="chat-message" style="color: #9ca3af;">Messages will appear here...</div>
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="chatInput" placeholder="Type a message..." disabled>
+            <button id="sendButton" disabled>Send</button>
+        </div>
+    </div>
+
     <script>
         const startButton = document.getElementById('startButton');
         const matchButton = document.getElementById('matchButton');
         const nextButton = document.getElementById('nextButton');
         const statusBox = document.getElementById('statusBox');
+        
+        const chatLog = document.getElementById('chatLog');
+        const chatInput = document.getElementById('chatInput');
+        const sendButton = document.getElementById('sendButton');
         
         const localVideo = document.getElementById('localVideo');
         const remoteVideo = document.getElementById('remoteVideo');
@@ -116,9 +172,18 @@
         let localStream = null;
         let myPeer = null;
         let currentCall = null;
+        let currentConn = null; // Keeps track of text data connection
 
-        // Use a fixed room token so you and your brother route to the exact same lobby pool
         const roomKey = "cyber-chat-room-v2";
+
+        // Append text to chat log interface
+        function appendMessage(sender, text, color) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'chat-message';
+            msgDiv.innerHTML = `<strong style="color: ${color}">${sender}:</strong> ${text}`;
+            chatLog.appendChild(msgDiv);
+            chatLog.scrollTop = chatLog.scrollHeight;
+        }
 
         // 1. Unblock Android camera hardware
         startButton.onclick = async () => {
@@ -133,19 +198,50 @@
             }
         };
 
+        // Send chat messages serverlessly
+        sendButton.onclick = () => {
+            const message = chatInput.value.trim();
+            if (!message || !currentConn) return;
+            
+            currentConn.send(message); // Sends data straight over the P2P connection channel
+            appendMessage("You", message, "#38bdf8");
+            chatInput.value = "";
+        };
+
+        // Allow pressing Enter key to send chat
+        chatInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") sendButton.click();
+        });
+
+        // Setup text messaging tracking actions
+        function setupDataConnection(conn) {
+            currentConn = conn;
+            chatInput.disabled = false;
+            sendButton.disabled = false;
+            
+            conn.on('data', (data) => {
+                appendMessage("Stranger", data, "#10b981");
+            });
+
+            conn.on('close', () => {
+                appendMessage("System", "Partner disconnected.", "#ef4444");
+                chatInput.disabled = true;
+                sendButton.disabled = true;
+            });
+        }
+
         // 2. Automate matchmaking pool using PeerJS dynamic rooms
         matchButton.onclick = () => {
             matchButton.disabled = true;
             nextButton.disabled = false;
             statusBox.innerText = "Status: Connecting to matchmaker...";
 
-            // Connect a peer node pointing directly to free open servers
             myPeer = new Peer(roomKey + "-peer-A");
 
             myPeer.on('open', (id) => {
                 statusBox.innerText = "Status: Lobby open. Waiting for partner...";
                 
-                // If you are Peer A, wait for Peer B to call you
+                // Track video call data streams
                 myPeer.on('call', (incomingCall) => {
                     currentCall = incomingCall;
                     incomingCall.answer(localStream);
@@ -154,39 +250,25 @@
                         statusBox.innerText = "Status: Connected to stranger!";
                     });
                 });
+
+                // Track serverless text communication links
+                myPeer.on('connection', (conn) => {
+                    setupDataConnection(conn);
+                });
             });
 
-            // If Peer A is already active in the lobby, join as Peer B and call them
             myPeer.on('error', (err) => {
                 if (err.type === 'unavailable-id') {
                     myPeer = new Peer(); 
                     myPeer.on('open', () => {
-                        statusBox.innerText = "Status: Match found! Launching stream...";
+                        statusBox.clientX = "Status: Match found! Launching stream...";
+                        
+                        // Bridge text channel data link
+                        const conn = myPeer.connect(roomKey + "-peer-A");
+                        setupDataConnection(conn);
+
+                        // Bridge video stream channel link
                         const call = myPeer.call(roomKey + "-peer-A", localStream);
                         currentCall = call;
                         
                         call.on('stream', (remoteStream) => {
-                            remoteVideo.srcObject = remoteStream;
-                            statusBox.innerText = "Status: Connected to stranger!";
-                        });
-                    });
-                } else {
-                    console.error("PeerJS Fault:", err);
-                    statusBox.innerText = "Status: Retrying connection...";
-                    setTimeout(() => matchButton.click(), 1000);
-                }
-            });
-        };
-
-        // 3. Skip / Reset current call rooms instantly
-        nextButton.onclick = () => {
-            if (currentCall) { currentCall.close(); currentCall = null; }
-            if (myPeer) { myPeer.destroy(); myPeer = null; }
-            remoteVideo.srcObject = null;
-            
-            // Re-trigger the matchmaking search automatically
-            matchButton.click();
-        };
-    </script>
-</body>
-</html>
